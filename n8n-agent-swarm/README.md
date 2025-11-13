@@ -9,7 +9,7 @@ A production-ready multi-agent AI automation system powered by n8n, featuring sp
 
 ## 🎯 Overview
 
-This system orchestrates **6 specialized AI agents** that collaborate to automate your workflows:
+This system orchestrates **7 specialized AI agents** that collaborate to automate your workflows:
 
 - **📧 Email Agent** - Gmail operations (send, read, reply, organize)
 - **📅 Calendar Agent** - Google Calendar management
@@ -17,9 +17,11 @@ This system orchestrates **6 specialized AI agents** that collaborate to automat
 - **🎥 YouTube Agent** - Video research and content management
 - **🌐 Web Agent** - Real-time web searches and weather info
 - **🧠 Main Executive Agent** - Intelligent orchestrator that delegates to specialized agents
+- **🔮 Meta Agent** - **SELF-EVOLVING** system that creates new agents on demand!
 
 ## ✨ Features
 
+- **🔮 SELF-EVOLVING SYSTEM** - Meta Agent can create new agents on demand! Just say "Add a Snapchat agent" and it generates, tests, and deploys it!
 - **🎙️ Voice Support** - Send voice messages via Telegram (automatic transcription with Whisper)
 - **💬 Conversational Memory** - Context-aware conversations with session management
 - **📊 Automatic Logging** - All interactions logged to Google Sheets
@@ -114,6 +116,18 @@ open http://localhost:5678
 
 ## 💡 Usage Examples
 
+### 🔮 Self-Evolution (NEW!)
+```
+You: "Add a Snapchat agent so I can post stories via Telegram"
+Bot: ✅ Snapchat Agent created!
+     • Generated agent configuration
+     • Created API integration
+     • Updated workflow
+     • Committed to GitHub
+
+     Try: "Post a Snapchat story saying Hello World!"
+```
+
 ### Single Agent Request
 ```
 You: "Send an email to john@example.com about tomorrow's meeting"
@@ -181,6 +195,32 @@ npm run backup        # Backup workflows
 ```
 
 ## 🤝 Agent Capabilities
+
+### 🔮 Meta Agent (Self-Evolution System)
+**The game-changer!** Create new agents via natural language:
+- **"Add a Snapchat agent"** → Generates complete agent
+- **"Create Twitter integration"** → Builds API wrapper
+- **"Improve Email Agent"** → Enhances existing agents
+- **Auto-deploys** to GitHub with PR
+- **Pre-built templates** for popular services
+
+**Try it:**
+```bash
+# Via Telegram
+"Add a Snapchat agent for posting stories"
+
+# Via CLI
+node scripts/generate-agent.js snapchat
+```
+
+**Available Templates:**
+- Social: Snapchat, Twitter, Instagram, TikTok
+- Productivity: Notion, Trello, Asana
+- Communication: Slack, Discord, WhatsApp
+
+**[Full Documentation →](docs/META-AGENT.md)**
+
+---
 
 ### Email Agent
 - Send emails with attachments
