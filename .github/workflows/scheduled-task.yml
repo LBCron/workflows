@@ -1,0 +1,35 @@
+name: Tâche Planifiée
+
+# Ce workflow s'exécute automatiquement selon un planning
+on:
+  schedule:
+    # Exécute tous les jours à 2h du matin (UTC)
+    - cron: '0 2 * * *'
+  workflow_dispatch: # Permet l'exécution manuelle
+
+jobs:
+  scheduled-task:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Configuration de l'environnement
+        run: |
+          echo "Début de la tâche planifiée"
+          date
+
+      - name: Exécution du script d'automatisation
+        run: |
+          # Remplacez ceci par votre script personnalisé
+          echo "Exécution de la tâche automatisée"
+          # bash scripts/votre-script.sh
+
+      - name: Notification de succès
+        if: success()
+        run: echo "✅ Tâche complétée avec succès"
+
+      - name: Notification d'échec
+        if: failure()
+        run: echo "❌ La tâche a échoué"

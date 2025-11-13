@@ -1,0 +1,55 @@
+name: Déploiement Manuel
+
+# Workflow de déploiement qui ne peut être lancé que manuellement
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environnement de déploiement'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+
+      version:
+        description: 'Version à déployer'
+        required: false
+        default: 'latest'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Affichage de la configuration
+        run: |
+          echo "🚀 Déploiement sur: ${{ github.event.inputs.environment }}"
+          echo "📦 Version: ${{ github.event.inputs.version }}"
+
+      - name: Préparation du déploiement
+        run: |
+          echo "Préparation de l'environnement de déploiement..."
+          # Ajoutez vos commandes de build ici
+          # npm run build
+          # docker build -t myapp:${{ github.event.inputs.version }} .
+
+      - name: Déploiement
+        run: |
+          echo "Déploiement en cours..."
+          # Ajoutez vos commandes de déploiement ici
+          # kubectl apply -f k8s/
+          # aws s3 sync ./dist s3://mybucket
+          # scp -r ./dist user@server:/var/www/
+
+      - name: Vérification post-déploiement
+        run: |
+          echo "Vérification du déploiement..."
+          # curl -f https://votre-site.com/health
+
+      - name: Notification
+        run: |
+          echo "✅ Déploiement réussi sur ${{ github.event.inputs.environment }}"

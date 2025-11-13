@@ -1,0 +1,39 @@
+name: Validation au Push
+
+# Ce workflow s'exécute à chaque push sur le dépôt
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Vérification des fichiers
+        run: |
+          echo "Vérification de la structure du projet..."
+          ls -la
+
+      - name: Exécution des tests
+        run: |
+          echo "Exécution des tests..."
+          # Ajoutez vos commandes de test ici
+          # npm test
+          # pytest
+          # go test
+
+      - name: Validation de la qualité du code
+        run: |
+          echo "Validation de la qualité du code..."
+          # Ajoutez vos outils de linting ici
+          # eslint .
+          # flake8 .
+          # golangci-lint run

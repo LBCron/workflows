@@ -1,0 +1,47 @@
+# Fichiers de secrets et configuration
+.env
+.env.local
+*.secret
+secrets/
+
+# Logs
+*.log
+logs/
+
+# Fichiers temporaires
+*.tmp
+tmp/
+temp/
+
+# Fichiers OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Node
+node_modules/
+package-lock.json
+yarn.lock
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+env/
+ENV/
+
+# Build
+dist/
+build/
+*.build
+
+# Cache
+.cache/
+*.cache
