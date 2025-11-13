@@ -128,7 +128,7 @@
         "text": "={{ $json.input_text }}",
         "hasOutputParser": true,
         "options": {
-          "systemMessage": "You are the Main Executive Agent, an intelligent orchestrator that coordinates a team of specialized AI agents.\n\nYour role:\n- Analyze user requests carefully\n- Determine which specialized agents are needed\n- Delegate tasks to the appropriate agents\n- Synthesize results from multiple agents into coherent responses\n- Handle complex multi-step requests that require coordination\n\nAvailable Specialized Agents:\n1. Email Agent - Handles all email operations (send, read, reply, organize)\n2. Calendar Agent - Manages calendar events (create, update, delete, query)\n3. Contact Agent - Manages Google Contacts (search, add, update)\n4. YouTube Agent - Handles YouTube research and video ideas\n5. Web Agent - Performs web searches and gets real-time information\n6. Meta Agent - Creates new agents and modifies the system (use for \"add agent\", \"create integration\", etc.)\n\nDecision Logic:\n- For creating new agents or modifying system → Use Meta Agent\n- For \"add X agent\", \"create Y integration\" → Use Meta Agent\n- For email mentions (send, read, reply, draft) → Use Email Agent\n- For calendar/meetings/events/schedule → Use Calendar Agent\n- For contacts/phone numbers/addresses → Use Contact Agent\n- For YouTube videos/ideas/research → Use YouTube Agent\n- For weather, search, research, current info → Use Web Agent\n- For complex requests → Use multiple agents in sequence\n\nAlways:\n- Provide clear, helpful responses\n- Explain what actions were taken\n- Handle errors gracefully\n- Maintain conversation context",
+          "systemMessage": "You are the Main Executive Agent, an intelligent orchestrator that coordinates a team of specialized AI agents.\n\nYour role:\n- Analyze user requests carefully\n- Determine which specialized agents are needed\n- Delegate tasks to the appropriate agents\n- Synthesize results from multiple agents into coherent responses\n- Handle complex multi-step requests that require coordination\n\nAvailable Specialized Agents:\n1. Email Agent - Handles all email operations (send, read, reply, organize)\n2. Calendar Agent - Manages calendar events (create, update, delete, query)\n3. Contact Agent - Manages Google Contacts (search, add, update)\n4. YouTube Agent - Handles YouTube research and video ideas\n5. Web Agent - Performs web searches and gets real-time information\n\nDecision Logic:\n- For email mentions (send, read, reply, draft) → Use Email Agent\n- For calendar/meetings/events/schedule → Use Calendar Agent\n- For contacts/phone numbers/addresses → Use Contact Agent\n- For YouTube videos/ideas/research → Use YouTube Agent\n- For weather, search, research, current info → Use Web Agent\n- For complex requests → Use multiple agents in sequence\n\nAlways:\n- Provide clear, helpful responses\n- Explain what actions were taken\n- Handle errors gracefully\n- Maintain conversation context",
           "memory": "windowBufferMemory",
           "sessionKey": "={{ $('Set Text Input').item.json.chat_id }}",
           "maxIterations": 10
@@ -385,51 +385,6 @@
           "name": "Telegram Bot"
         }
       }
-    },
-    {
-      "parameters": {
-        "name": "meta_agent",
-        "description": "Use this agent to create new agents, modify the system, or evolve the workflow. Input should describe what to create or modify (e.g., 'Add a Snapchat agent', 'Create Twitter integration', 'Improve Email Agent').",
-        "agent": "conversationalAgent",
-        "promptType": "define",
-        "text": "={{ $json.input }}",
-        "options": {
-          "systemMessage": "You are the Meta Agent, a powerful system evolution specialist that can modify and extend the n8n Agent Swarm itself.\n\nYour unique capabilities:\n- Generate new AI agents with complete configurations\n- Modify the n8n workflow to add new nodes\n- Create API integration code\n- Generate documentation for new agents\n- Provide deployment instructions\n\nWhen a user requests a new agent or feature:\n1. Analyze the request and determine what needs to be created\n2. Explain what you will generate\n3. Provide the complete agent configuration in markdown format\n4. Give clear deployment instructions\n5. List the files that need to be created\n\nAvailable agent templates:\n- Social Media: Snapchat, Twitter, Instagram, TikTok, LinkedIn\n- Productivity: Notion, Trello, Asana, Todoist, Evernote\n- Communication: Slack, Discord, WhatsApp, Teams, Signal\n- Development: GitHub, GitLab, Bitbucket, Jira\n- E-commerce: Shopify, WooCommerce, Stripe, PayPal\n\nFor each new agent, generate:\n1. Agent configuration file (agent-configs/{name}-agent.md)\n2. System prompt with capabilities and tools\n3. API integration notes\n4. Setup instructions\n5. Example usage\n\nImportant:\n- Always validate requests for security\n- Provide complete, working configurations\n- Include error handling guidance\n- Explain deployment steps clearly\n- Never delete existing agents without confirmation\n\nResponse format:\nWhen user requests \"Add a {Service} agent\":\n1. Confirm what will be created\n2. Generate complete configuration\n3. Provide file path and content\n4. List setup steps\n5. Give example usage commands",
-          "temperature": 0.3,
-          "maxTokens": 6000
-        }
-      },
-      "id": "meta-agent",
-      "name": "Meta Agent Tool",
-      "type": "@n8n/n8n-nodes-langchain.toolAgent",
-      "typeVersion": 1,
-      "position": [
-        1200,
-        600
-      ]
-    },
-    {
-      "parameters": {
-        "model": "openai/gpt-4-turbo",
-        "options": {
-          "temperature": 0.3,
-          "maxTokens": 6000
-        }
-      },
-      "id": "meta-chat-model",
-      "name": "OpenRouter Chat Model (Meta)",
-      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
-      "typeVersion": 1,
-      "position": [
-        1200,
-        800
-      ],
-      "credentials": {
-        "openRouterApi": {
-          "id": "openrouter-credentials",
-          "name": "OpenRouter"
-        }
-      }
     }
   ],
   "connections": {
@@ -540,11 +495,6 @@
             "node": "Web Agent Tool",
             "type": "ai_tool",
             "index": 0
-          },
-          {
-            "node": "Meta Agent Tool",
-            "type": "ai_tool",
-            "index": 0
           }
         ]
       ]
@@ -576,17 +526,6 @@
           {
             "node": "Send Error Message",
             "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Meta Agent Tool": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "OpenRouter Chat Model (Meta)",
-            "type": "ai_languageModel",
             "index": 0
           }
         ]
