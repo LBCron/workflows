@@ -1,0 +1,59 @@
+{
+  "name": "n8n-agent-swarm",
+  "version": "1.0.0",
+  "description": "Multi-agent AI automation system powered by n8n with specialized agents for email, calendar, contacts, YouTube, and web operations",
+  "main": "index.js",
+  "scripts": {
+    "setup": "bash scripts/setup.sh",
+    "start": "docker-compose up -d",
+    "stop": "docker-compose down",
+    "logs": "docker-compose logs -f n8n",
+    "restart": "docker-compose restart n8n",
+    "import-workflow": "node scripts/import-workflow.js",
+    "configure": "node scripts/configure-credentials.js",
+    "validate": "node scripts/validate-workflow.js",
+    "deploy": "node scripts/deploy-workflow.js",
+    "test": "node scripts/test-agents.js",
+    "backup": "bash scripts/backup.sh",
+    "clean": "docker-compose down -v && rm -rf logs/*",
+    "dev": "docker-compose up",
+    "prod": "NODE_ENV=production docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d"
+  },
+  "keywords": [
+    "n8n",
+    "automation",
+    "ai-agents",
+    "multi-agent",
+    "workflow",
+    "telegram-bot",
+    "langchain",
+    "gpt-4",
+    "openai",
+    "google-apis"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/n8n-agent-swarm.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/n8n-agent-swarm/issues"
+  },
+  "homepage": "https://github.com/yourusername/n8n-agent-swarm#readme",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.50.0",
+    "prettier": "^3.0.3"
+  },
+  "dependencies": {},
+  "optionalDependencies": {},
+  "peerDependencies": {},
+  "config": {
+    "n8n_version": "latest",
+    "postgres_version": "15-alpine"
+  }
+}

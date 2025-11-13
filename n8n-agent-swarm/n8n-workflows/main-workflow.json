@@ -1,0 +1,555 @@
+{
+  "name": "AI Agent Swarm - Multi-Agent System",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ]
+      },
+      "id": "telegram-trigger",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "telegram-webhook-main",
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-bot-credentials",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.message.voice }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "check-voice",
+      "name": "Check if Voice Message",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "operation": "get",
+        "fileId": "={{ $json.message.voice.file_id }}"
+      },
+      "id": "download-voice",
+      "name": "Download Voice File",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        400,
+        -100
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-bot-credentials",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "transcribe",
+        "binaryPropertyName": "data",
+        "options": {
+          "language": "en",
+          "temperature": 0
+        }
+      },
+      "id": "transcribe-audio",
+      "name": "Transcribe Audio (Whisper)",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [
+        600,
+        -100
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "input_text",
+              "value": "={{ $json.message.voice ? $('Transcribe Audio (Whisper)').item.json.text : $json.message.text }}"
+            },
+            {
+              "name": "chat_id",
+              "value": "={{ $json.message.chat.id }}"
+            },
+            {
+              "name": "user_name",
+              "value": "={{ $json.message.from.first_name || $json.message.from.username }}"
+            },
+            {
+              "name": "message_id",
+              "value": "={{ $json.message.message_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-input-text",
+      "name": "Set Text Input",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        800,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "agent": "conversationalAgent",
+        "promptType": "define",
+        "text": "={{ $json.input_text }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are the Main Executive Agent, an intelligent orchestrator that coordinates a team of specialized AI agents.\n\nYour role:\n- Analyze user requests carefully\n- Determine which specialized agents are needed\n- Delegate tasks to the appropriate agents\n- Synthesize results from multiple agents into coherent responses\n- Handle complex multi-step requests that require coordination\n\nAvailable Specialized Agents:\n1. Email Agent - Handles all email operations (send, read, reply, organize)\n2. Calendar Agent - Manages calendar events (create, update, delete, query)\n3. Contact Agent - Manages Google Contacts (search, add, update)\n4. YouTube Agent - Handles YouTube research and video ideas\n5. Web Agent - Performs web searches and gets real-time information\n\nDecision Logic:\n- For email mentions (send, read, reply, draft) → Use Email Agent\n- For calendar/meetings/events/schedule → Use Calendar Agent\n- For contacts/phone numbers/addresses → Use Contact Agent\n- For YouTube videos/ideas/research → Use YouTube Agent\n- For weather, search, research, current info → Use Web Agent\n- For complex requests → Use multiple agents in sequence\n\nAlways:\n- Provide clear, helpful responses\n- Explain what actions were taken\n- Handle errors gracefully\n- Maintain conversation context",
+          "memory": "windowBufferMemory",
+          "sessionKey": "={{ $('Set Text Input').item.json.chat_id }}",
+          "maxIterations": 10
+        }
+      },
+      "id": "main-agent",
+      "name": "Main Executive Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        1000,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-4-turbo",
+        "options": {
+          "temperature": 0.7,
+          "maxTokens": 4000,
+          "topP": 1
+        }
+      },
+      "id": "main-chat-model",
+      "name": "OpenRouter Chat Model (Main)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        200
+      ],
+      "credentials": {
+        "openRouterApi": {
+          "id": "openrouter-credentials",
+          "name": "OpenRouter"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "email_agent",
+        "description": "Use this agent for any email-related tasks: sending emails, reading emails, replying to emails, organizing emails with labels, marking as unread, or creating drafts. Input should be the user's email request.",
+        "agent": "conversationalAgent",
+        "promptType": "define",
+        "text": "={{ $json.input }}",
+        "options": {
+          "systemMessage": "You are the Email Agent, specialized in managing Gmail operations.\n\nCapabilities:\n- Send emails to recipients\n- Read and search emails\n- Reply to emails\n- Organize emails with labels\n- Mark emails as read/unread\n- Create drafts\n\nWhen handling requests:\n1. Parse email addresses, subjects, and content carefully\n2. Use appropriate Gmail tools based on the action needed\n3. For sending: ensure to, subject, and message are clear\n4. For reading: interpret search queries effectively\n5. Provide confirmation of actions taken\n\nTools available:\n- gmail_send: Send new email\n- gmail_get: Get email by ID or search\n- gmail_reply: Reply to existing email\n- gmail_label: Add/remove labels\n- gmail_mark_unread: Mark as unread\n- gmail_draft: Create draft email\n\nAlways confirm successful actions and provide relevant details.",
+          "temperature": 0.5
+        }
+      },
+      "id": "email-agent",
+      "name": "Email Agent Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolAgent",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        -400
+      ]
+    },
+    {
+      "parameters": {
+        "name": "calendar_agent",
+        "description": "Use this agent for calendar and scheduling tasks: creating events, updating events, deleting events, querying calendar, or managing attendees. Input should describe the calendar action needed.",
+        "agent": "conversationalAgent",
+        "promptType": "define",
+        "text": "={{ $json.input }}",
+        "options": {
+          "systemMessage": "You are the Calendar Agent, specialized in managing Google Calendar.\n\nCapabilities:\n- Create calendar events with date, time, duration\n- Update existing events\n- Delete events\n- Query calendar for events\n- Add attendees and send invitations\n- Set reminders and notifications\n\nWhen handling requests:\n1. Parse dates and times carefully (handle relative dates like 'tomorrow', 'next week')\n2. Extract event details: title, start time, end time, attendees\n3. Default to 1-hour duration if not specified\n4. Use appropriate timezone (default to user's timezone)\n5. Confirm event creation with details\n\nTools available:\n- gcal_create: Create new event\n- gcal_update: Update existing event\n- gcal_delete: Delete event\n- gcal_get: Get events by query\n- gcal_add_attendees: Add attendees to event\n\nDate parsing examples:\n- 'tomorrow at 2pm' → next day, 14:00\n- 'Friday 3pm' → next Friday, 15:00\n- 'in 2 hours' → current time + 2 hours",
+          "temperature": 0.3
+        }
+      },
+      "id": "calendar-agent",
+      "name": "Calendar Agent Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolAgent",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "name": "contact_agent",
+        "description": "Use this agent for managing Google Contacts: searching for contacts, adding new contacts, or updating contact information. Input should describe the contact operation needed.",
+        "agent": "conversationalAgent",
+        "promptType": "define",
+        "text": "={{ $json.input }}",
+        "options": {
+          "systemMessage": "You are the Contact Agent, specialized in managing Google Contacts.\n\nCapabilities:\n- Search for contacts by name, email, or phone\n- Add new contacts with details\n- Update existing contact information\n- Retrieve contact details\n\nWhen handling requests:\n1. Parse contact information carefully\n2. Extract: name, email, phone number, organization, notes\n3. Validate email and phone formats\n4. Handle partial matches in searches\n5. Confirm contact operations with details\n\nTools available:\n- gcontacts_get: Search and retrieve contacts\n- gcontacts_add: Add new contact\n- gcontacts_update: Update existing contact\n\nContact structure:\n- Given Name / Family Name\n- Email addresses (work, personal)\n- Phone numbers (mobile, work, home)\n- Organization / Job Title\n- Notes\n\nAlways confirm the contact operation and show key details.",
+          "temperature": 0.3
+        }
+      },
+      "id": "contact-agent",
+      "name": "Contact Agent Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolAgent",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "name": "youtube_agent",
+        "description": "Use this agent for YouTube-related tasks: searching for videos, getting video statistics, managing video ideas database, or researching video topics. Input should describe the YouTube action needed.",
+        "agent": "conversationalAgent",
+        "promptType": "define",
+        "text": "={{ $json.input }}",
+        "options": {
+          "systemMessage": "You are the YouTube Agent, specialized in YouTube content research and management.\n\nCapabilities:\n- Search for YouTube videos by topic\n- Get video statistics (views, likes, comments)\n- Retrieve video ideas from database (Google Sheets/Notion)\n- Add new video ideas to database\n- Research trending topics\n\nWhen handling requests:\n1. Parse search queries and topics\n2. Return relevant video information: title, channel, views, URL\n3. For multiple videos, format results clearly\n4. When adding ideas, structure with: topic, description, tags\n5. Provide actionable insights\n\nTools available:\n- youtube_search: Search for videos\n- youtube_stats: Get video statistics\n- get_video_ideas: Retrieve ideas from database\n- add_video_idea: Add new idea to database\n\nVideo information format:\n- Title\n- Channel Name\n- Views / Likes\n- Upload Date\n- URL\n\nAlways provide clear, useful video recommendations.",
+          "temperature": 0.6
+        }
+      },
+      "id": "youtube-agent",
+      "name": "YouTube Agent Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolAgent",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "name": "web_agent",
+        "description": "Use this agent for web searches, real-time information, weather, news, or any current information needs. Input should be the search query or information request.",
+        "agent": "conversationalAgent",
+        "promptType": "define",
+        "text": "={{ $json.input }}",
+        "options": {
+          "systemMessage": "You are the Web Agent, specialized in web research and real-time information retrieval.\n\nCapabilities:\n- Perform web searches (Tavily, Perplexity)\n- Get current weather information\n- Find latest news and articles\n- Research topics comprehensively\n- Get real-time data\n\nWhen handling requests:\n1. Identify the type of information needed\n2. Use appropriate search tool (Tavily for general, Perplexity for deep research)\n3. For weather: get location and return current conditions + forecast\n4. Synthesize search results into clear, concise answers\n5. Cite sources when relevant\n\nTools available:\n- tavily_search: Fast web search\n- perplexity_search: Deep AI-powered research\n- weather_api: Get weather by location\n\nSearch strategies:\n- General questions → Tavily\n- Complex research → Perplexity\n- Weather → OpenWeatherMap API\n- News/trends → Tavily with recency filter\n\nAlways provide up-to-date, accurate information with sources.",
+          "temperature": 0.7
+        }
+      },
+      "id": "web-agent",
+      "name": "Web Agent Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolAgent",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Clean up the agent response for Telegram\nconst response = $input.item.json.output;\nconst chatId = $('Set Text Input').item.json.chat_id;\nconst userName = $('Set Text Input').item.json.user_name;\nconst inputText = $('Set Text Input').item.json.input_text;\n\n// Extract actions taken by agents\nlet agentsCalled = [];\nif (response.toLowerCase().includes('email')) agentsCalled.push('Email Agent');\nif (response.toLowerCase().includes('calendar') || response.toLowerCase().includes('event')) agentsCalled.push('Calendar Agent');\nif (response.toLowerCase().includes('contact')) agentsCalled.push('Contact Agent');\nif (response.toLowerCase().includes('video') || response.toLowerCase().includes('youtube')) agentsCalled.push('YouTube Agent');\nif (response.toLowerCase().includes('weather') || response.toLowerCase().includes('search')) agentsCalled.push('Web Agent');\n\n// Format final response\nconst finalResponse = `✅ ${response}`;\n\nreturn {\n  json: {\n    chat_id: chatId,\n    response: finalResponse,\n    input: inputText,\n    user: userName,\n    agents_called: agentsCalled.join(', '),\n    timestamp: new Date().toISOString(),\n    success: true\n  }\n};"
+      },
+      "id": "clean-response",
+      "name": "Clean Up Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": "Logs",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $json.timestamp }}",
+            "User": "={{ $json.user }}",
+            "Input": "={{ $json.input }}",
+            "Output": "={{ $json.response }}",
+            "Agents Called": "={{ $json.agents_called }}",
+            "Success": "={{ $json.success }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "log-to-sheets",
+      "name": "Log to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        1600,
+        100
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google-sheets-credentials",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.response }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-response",
+      "name": "Send Telegram Response",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        1600,
+        -100
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-bot-credentials",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.error }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "error-check",
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1400,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Set Text Input').item.json.chat_id }}",
+        "text": "❌ Sorry, an error occurred: {{ $json.error }}",
+        "additionalFields": {}
+      },
+      "id": "send-error",
+      "name": "Send Error Message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        1600,
+        300
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-bot-credentials",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Check if Voice Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check if Voice Message": {
+      "main": [
+        [
+          {
+            "node": "Download Voice File",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Text Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Voice File": {
+      "main": [
+        [
+          {
+            "node": "Transcribe Audio (Whisper)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe Audio (Whisper)": {
+      "main": [
+        [
+          {
+            "node": "Set Text Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Text Input": {
+      "main": [
+        [
+          {
+            "node": "Main Executive Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Main Executive Agent": {
+      "main": [
+        [
+          {
+            "node": "Clean Up Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "ai_languageModel": [
+        [
+          {
+            "node": "OpenRouter Chat Model (Main)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ],
+      "ai_tool": [
+        [
+          {
+            "node": "Email Agent Tool",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "Calendar Agent Tool",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "Contact Agent Tool",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "YouTube Agent Tool",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "Web Agent Tool",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean Up Response": {
+      "main": [
+        [
+          {
+            "node": "Log to Google Sheets",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Telegram Response",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Error Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Handler": {
+      "main": [
+        [
+          {
+            "node": "Send Error Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "AI Agent",
+      "id": "ai-agent-tag"
+    },
+    {
+      "name": "Automation",
+      "id": "automation-tag"
+    }
+  ],
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "n8n-agent-swarm-v1"
+  },
+  "pinData": {},
+  "versionId": "1.0.0"
+}
