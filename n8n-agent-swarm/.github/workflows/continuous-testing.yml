@@ -1,0 +1,151 @@
+name: Continuous Testing
+
+# Run tests on every push and pull request
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: |
+          cd n8n-agent-swarm
+          npm install
+
+      - name: 🧪 Run Unit Tests
+        id: unit
+        run: |
+          cd n8n-agent-swarm
+          npm run test:unit || echo "unit_failed=true" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: 🔗 Run Integration Tests
+        id: integration
+        run: |
+          cd n8n-agent-swarm
+          npm run test:integration || echo "integration_failed=true" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: 🎯 Run E2E Tests
+        id: e2e
+        run: |
+          cd n8n-agent-swarm
+          npm run test:e2e || echo "e2e_failed=true" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: ⚡ Run Performance Tests
+        id: performance
+        run: |
+          cd n8n-agent-swarm
+          npm run test:performance || echo "performance_failed=true" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: 📊 Generate Test Report
+        run: |
+          cd n8n-agent-swarm
+          npm test
+
+      - name: 📤 Upload Test Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-report
+          path: n8n-agent-swarm/reports/tests/*.html
+
+      - name: 🔔 Notify Telegram (Success)
+        if: success() && secrets.TELEGRAM_BOT_TOKEN != ''
+        run: |
+          MESSAGE="✅ *Tests Passed!*
+
+All tests passed successfully
+
+📊 *Test Results:*
+• Unit Tests: ✅
+• Integration Tests: ✅
+• E2E Tests: ✅
+• Performance Tests: ✅
+
+Branch: \`${{ github.ref_name }}\`
+Commit: \`${GITHUB_SHA:0:7}\`
+Author: ${{ github.actor }}
+
+[View Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d text="$MESSAGE" \
+            -d parse_mode="Markdown"
+
+      - name: 🔔 Notify Telegram (Failure)
+        if: failure() && secrets.TELEGRAM_BOT_TOKEN != ''
+        run: |
+          FAILED_TESTS=""
+          if [ "${{ steps.unit.outputs.unit_failed }}" = "true" ]; then
+            FAILED_TESTS="$FAILED_TESTS\n• Unit Tests ❌"
+          fi
+          if [ "${{ steps.integration.outputs.integration_failed }}" = "true" ]; then
+            FAILED_TESTS="$FAILED_TESTS\n• Integration Tests ❌"
+          fi
+          if [ "${{ steps.e2e.outputs.e2e_failed }}" = "true" ]; then
+            FAILED_TESTS="$FAILED_TESTS\n• E2E Tests ❌"
+          fi
+          if [ "${{ steps.performance.outputs.performance_failed }}" = "true" ]; then
+            FAILED_TESTS="$FAILED_TESTS\n• Performance Tests ❌"
+          fi
+
+          MESSAGE="❌ *Tests Failed!*
+
+Some tests failed
+
+📊 *Failed Tests:*$FAILED_TESTS
+
+Branch: \`${{ github.ref_name }}\`
+Commit: \`${GITHUB_SHA:0:7}\`
+Author: ${{ github.actor }}
+
+[View Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d text="$MESSAGE" \
+            -d parse_mode="Markdown"
+
+      - name: ❌ Fail if tests failed
+        if: steps.unit.outputs.unit_failed == 'true' || steps.integration.outputs.integration_failed == 'true' || steps.e2e.outputs.e2e_failed == 'true' || steps.performance.outputs.performance_failed == 'true'
+        run: exit 1
+
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: 📦 Install dependencies
+        run: |
+          cd n8n-agent-swarm
+          npm install
+
+      - name: 🔍 Lint code
+        run: |
+          cd n8n-agent-swarm
+          # npm run lint (uncomment when eslint is configured)
+          echo "Linting... (placeholder)"
