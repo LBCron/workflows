@@ -1,0 +1,531 @@
+{
+  "timestamp": "2025-11-15T20:29:14.894Z",
+  "summary": {
+    "totalTests": 60,
+    "passed": 60,
+    "failed": 0,
+    "warnings": 24,
+    "successRate": "100.0"
+  },
+  "phases": [
+    {
+      "phase": "Project Structure",
+      "passed": 28,
+      "failed": 0,
+      "warnings": 0,
+      "details": {
+        "passed": [
+          {
+            "type": "file",
+            "path": "package.json",
+            "size": 3456,
+            "description": "npm configuration"
+          },
+          {
+            "type": "file",
+            "path": ".env.example",
+            "size": 5477,
+            "description": "Environment variables template"
+          },
+          {
+            "type": "file",
+            "path": "docker-compose.yml",
+            "size": 3842,
+            "description": "Docker configuration"
+          },
+          {
+            "type": "file",
+            "path": "fly.toml",
+            "size": 1860,
+            "description": "Fly.io configuration"
+          },
+          {
+            "type": "file",
+            "path": "README.md",
+            "size": 12936,
+            "description": "Main documentation"
+          },
+          {
+            "type": "file",
+            "path": "agent-configs/memory-agent.md",
+            "size": 6508,
+            "description": "Memory agent config"
+          },
+          {
+            "type": "file",
+            "path": "templates/phone-storage/my-profile.json",
+            "size": 2428,
+            "description": "Profile template"
+          },
+          {
+            "type": "file",
+            "path": "templates/phone-storage/my-memory.json",
+            "size": 4157,
+            "description": "Memory template"
+          },
+          {
+            "type": "file",
+            "path": "templates/phone-storage/my-contacts.json",
+            "size": 2852,
+            "description": "Contacts template"
+          },
+          {
+            "type": "file",
+            "path": "templates/phone-storage/my-habits.json",
+            "size": 5848,
+            "description": "Habits template"
+          },
+          {
+            "type": "file",
+            "path": "scripts/phone-storage/init-storage.js",
+            "size": 10837,
+            "description": "Storage initialization"
+          },
+          {
+            "type": "file",
+            "path": "scripts/phone-storage/sync-manager.js",
+            "size": 12839,
+            "description": "Sync manager"
+          },
+          {
+            "type": "file",
+            "path": "scripts/phone-storage/telegram-file-handler.js",
+            "size": 14249,
+            "description": "Telegram file handler"
+          },
+          {
+            "type": "file",
+            "path": "scripts/phone-storage/test-system.js",
+            "size": 9747,
+            "description": "Phone storage tests"
+          },
+          {
+            "type": "file",
+            "path": "scripts/ai-router/intelligent-model-router.js",
+            "size": 12789,
+            "description": "Multi-model router"
+          },
+          {
+            "type": "file",
+            "path": "scripts/context/advanced-context-engine.js",
+            "size": 14593,
+            "description": "Context engine"
+          },
+          {
+            "type": "file",
+            "path": "scripts/predictive/anticipation-engine.js",
+            "size": 16050,
+            "description": "Predictive engine"
+          },
+          {
+            "type": "file",
+            "path": "docs/PHONE-STORAGE.md",
+            "size": 16720,
+            "description": "Phone storage guide"
+          },
+          {
+            "type": "file",
+            "path": "ANALYSE-COMPLETE.md",
+            "size": 9661,
+            "description": "Complete analysis"
+          },
+          {
+            "type": "directory",
+            "path": "agent-configs"
+          },
+          {
+            "type": "directory",
+            "path": "scripts/phone-storage"
+          },
+          {
+            "type": "directory",
+            "path": "scripts/ai-router"
+          },
+          {
+            "type": "directory",
+            "path": "scripts/context"
+          },
+          {
+            "type": "directory",
+            "path": "scripts/predictive"
+          },
+          {
+            "type": "directory",
+            "path": "templates/phone-storage"
+          },
+          {
+            "type": "directory",
+            "path": "docs"
+          },
+          {
+            "type": "directory",
+            "path": ".cache/phone-storage"
+          },
+          {
+            "type": "directory",
+            "path": ".cache/phone-storage/backups"
+          }
+        ],
+        "failed": [],
+        "warnings": [],
+        "stats": {
+          "totalFiles": 19,
+          "totalDirs": 9,
+          "filesChecked": 19,
+          "dirsChecked": 9
+        }
+      }
+    },
+    {
+      "phase": "JSON Validation",
+      "passed": 8,
+      "failed": 0,
+      "warnings": 0,
+      "details": {
+        "valid": [
+          {
+            "path": "n8n-workflows/backup/main-workflow-pre-meta.json",
+            "size": 20266,
+            "keys": 9
+          },
+          {
+            "path": "n8n-workflows/main-workflow.json",
+            "size": 23721,
+            "keys": 9
+          },
+          {
+            "path": "package-lock.json",
+            "size": 53808,
+            "keys": 5
+          },
+          {
+            "path": "package.json",
+            "size": 3454,
+            "keys": 17
+          },
+          {
+            "path": "templates/phone-storage/my-contacts.json",
+            "size": 2852,
+            "keys": 10
+          },
+          {
+            "path": "templates/phone-storage/my-habits.json",
+            "size": 5834,
+            "keys": 12
+          },
+          {
+            "path": "templates/phone-storage/my-memory.json",
+            "size": 4153,
+            "keys": 11
+          },
+          {
+            "path": "templates/phone-storage/my-profile.json",
+            "size": 2428,
+            "keys": 11
+          }
+        ],
+        "invalid": [],
+        "warnings": [],
+        "stats": {
+          "totalFiles": 8,
+          "totalSize": 116516,
+          "filesChecked": 8
+        }
+      }
+    },
+    {
+      "phase": "JavaScript Syntax",
+      "passed": 24,
+      "failed": 0,
+      "warnings": 24,
+      "details": {
+        "valid": [
+          {
+            "path": "scripts/add-agent-to-workflow.js",
+            "size": 7573,
+            "lines": 264
+          },
+          {
+            "path": "scripts/add-meta-agent.js",
+            "size": 6626,
+            "lines": 194
+          },
+          {
+            "path": "scripts/ai-router/intelligent-model-router.js",
+            "size": 12789,
+            "lines": 509
+          },
+          {
+            "path": "scripts/configure-credentials.js",
+            "size": 9538,
+            "lines": 344
+          },
+          {
+            "path": "scripts/context/advanced-context-engine.js",
+            "size": 14593,
+            "lines": 529
+          },
+          {
+            "path": "scripts/deploy-workflow.js",
+            "size": 8991,
+            "lines": 345
+          },
+          {
+            "path": "scripts/generate-agent.js",
+            "size": 10131,
+            "lines": 364
+          },
+          {
+            "path": "scripts/import-workflow.js",
+            "size": 6871,
+            "lines": 282
+          },
+          {
+            "path": "scripts/learning-system.js",
+            "size": 14537,
+            "lines": 468
+          },
+          {
+            "path": "scripts/optimize-prompts.js",
+            "size": 14657,
+            "lines": 448
+          },
+          {
+            "path": "scripts/phone-storage/init-storage.js",
+            "size": 10837,
+            "lines": 350
+          },
+          {
+            "path": "scripts/phone-storage/sync-manager.js",
+            "size": 12839,
+            "lines": 545
+          },
+          {
+            "path": "scripts/phone-storage/telegram-file-handler.js",
+            "size": 14249,
+            "lines": 526
+          },
+          {
+            "path": "scripts/phone-storage/test-system.js",
+            "size": 9747,
+            "lines": 353
+          },
+          {
+            "path": "scripts/predictive/anticipation-engine.js",
+            "size": 16050,
+            "lines": 530
+          },
+          {
+            "path": "scripts/run-all-tests.js",
+            "size": 12304,
+            "lines": 450
+          },
+          {
+            "path": "scripts/run-full-audit.js",
+            "size": 8374,
+            "lines": 249
+          },
+          {
+            "path": "scripts/test-agents.js",
+            "size": 6827,
+            "lines": 284
+          },
+          {
+            "path": "scripts/trigger-agent-creation.js",
+            "size": 6211,
+            "lines": 215
+          },
+          {
+            "path": "scripts/validate-workflow.js",
+            "size": 10102,
+            "lines": 353
+          },
+          {
+            "path": "scripts/validation/js-syntax-checker.js",
+            "size": 5443,
+            "lines": 202
+          },
+          {
+            "path": "scripts/validation/json-validator.js",
+            "size": 5651,
+            "lines": 214
+          },
+          {
+            "path": "scripts/validation/project-structure-validator.js",
+            "size": 6146,
+            "lines": 207
+          },
+          {
+            "path": "tests/unit/test-email-agent.js",
+            "size": 4118,
+            "lines": 140
+          }
+        ],
+        "invalid": [],
+        "warnings": [
+          {
+            "path": "scripts/add-agent-to-workflow.js",
+            "warnings": [
+              "Missing \"use strict\" directive"
+            ]
+          },
+          {
+            "path": "scripts/add-meta-agent.js",
+            "warnings": [
+              "Missing \"use strict\" directive",
+              "Many console.log statements (26) - consider using logger"
+            ]
+          },
+          {
+            "path": "scripts/ai-router/intelligent-model-router.js",
+            "warnings": [
+              "Missing \"use strict\" directive"
+            ]
+          },
+          {
+            "path": "scripts/configure-credentials.js",
+            "warnings": [
+              "Missing \"use strict\" directive",
+              "Many console.log statements (21) - consider using logger"
+            ]
+          },
+          {
+            "path": "scripts/context/advanced-context-engine.js",
+            "warnings": [
+              "Missing \"use strict\" directive"
+            ]
+          },
+          {
+            "path": "scripts/deploy-workflow.js",
+            "warnings": [
+              "Missing \"use strict\" directive"
+            ]
+          },
+          {
+            "path": "scripts/generate-agent.js",
+            "warnings": [
+              "Missing \"use strict\" directive"
+            ]
+          },
+          {
+            "path": "scripts/import-workflow.js",
+            "warnings": [
+              "Missing \"use strict\" directive",
+              "Many console.log statements (11) - consider using logger"
+            ]
+          },
+          {
+            "path": "scripts/learning-system.js",
+            "warnings": [
+              "Missing \"use strict\" directive"
+            ]
+          },
+          {
+            "path": "scripts/optimize-prompts.js",
+            "warnings": [
+              "Missing \"use strict\" directive"
+            ]
+          },
+          {
+            "path": "scripts/phone-storage/init-storage.js",
+            "warnings": [
+              "Missing \"use strict\" directive",
+              "Many console.log statements (28) - consider using logger"
+            ]
+          },
+          {
+            "path": "scripts/phone-storage/sync-manager.js",
+            "warnings": [
+              "Missing \"use strict\" directive",
+              "Many console.log statements (25) - consider using logger"
+            ]
+          },
+          {
+            "path": "scripts/phone-storage/telegram-file-handler.js",
+            "warnings": [
+              "Missing \"use strict\" directive",
+              "Many console.log statements (11) - consider using logger"
+            ]
+          },
+          {
+            "path": "scripts/phone-storage/test-system.js",
+            "warnings": [
+              "Missing \"use strict\" directive"
+            ]
+          },
+          {
+            "path": "scripts/predictive/anticipation-engine.js",
+            "warnings": [
+              "Missing \"use strict\" directive",
+              "Many console.log statements (11) - consider using logger"
+            ]
+          },
+          {
+            "path": "scripts/run-all-tests.js",
+            "warnings": [
+              "Missing \"use strict\" directive"
+            ]
+          },
+          {
+            "path": "scripts/run-full-audit.js",
+            "warnings": [
+              "Missing \"use strict\" directive"
+            ]
+          },
+          {
+            "path": "scripts/test-agents.js",
+            "warnings": [
+              "Missing \"use strict\" directive"
+            ]
+          },
+          {
+            "path": "scripts/trigger-agent-creation.js",
+            "warnings": [
+              "Missing \"use strict\" directive"
+            ]
+          },
+          {
+            "path": "scripts/validate-workflow.js",
+            "warnings": [
+              "Missing \"use strict\" directive"
+            ]
+          },
+          {
+            "path": "scripts/validation/js-syntax-checker.js",
+            "warnings": [
+              "Uses eval() - potential security risk",
+              "Uses Function constructor - potential security risk",
+              "Many console.log statements (23) - consider using logger"
+            ]
+          },
+          {
+            "path": "scripts/validation/json-validator.js",
+            "warnings": [
+              "Missing \"use strict\" directive",
+              "Many console.log statements (21) - consider using logger"
+            ]
+          },
+          {
+            "path": "scripts/validation/project-structure-validator.js",
+            "warnings": [
+              "Missing \"use strict\" directive",
+              "Many console.log statements (21) - consider using logger"
+            ]
+          },
+          {
+            "path": "tests/unit/test-email-agent.js",
+            "warnings": [
+              "Missing \"use strict\" directive"
+            ]
+          }
+        ],
+        "stats": {
+          "totalFiles": 24,
+          "totalLines": 8365,
+          "totalSize": 235204,
+          "filesChecked": 24
+        }
+      }
+    }
+  ]
+}

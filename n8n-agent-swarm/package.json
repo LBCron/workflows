@@ -36,6 +36,10 @@
     "storage:status": "node scripts/phone-storage/telegram-file-handler.js status",
     "storage:backup": "node scripts/phone-storage/telegram-file-handler.js backup",
     "storage:clear": "node scripts/phone-storage/telegram-file-handler.js clear",
+    "audit": "node scripts/run-full-audit.js",
+    "audit:structure": "node scripts/validation/project-structure-validator.js",
+    "audit:json": "node scripts/validation/json-validator.js",
+    "audit:js": "node scripts/validation/js-syntax-checker.js",
     "postinstall": "echo '✅ Setup complete! Run: npm start (Linux/Mac) or npm run start:windows (Windows)'",
     "prod": "NODE_ENV=production docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d"
   },
