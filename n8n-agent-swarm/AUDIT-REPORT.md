@@ -1,13 +1,13 @@
 # 🔍 n8n-agent-swarm Audit Report
 
-**Generated:** 11/15/2025, 8:29:14 PM
+**Generated:** 11/15/2025, 10:06:29 PM
 
 ## 📊 Summary
 
-- **Total Tests:** 60
-- **Passed:** 60 ✅
+- **Total Tests:** 70
+- **Passed:** 70 ✅
 - **Failed:** 0 ✅
-- **Warnings:** 24 ⚠️
+- **Warnings:** 32 ⚠️
 - **Success Rate:** 100.0%
 
 ## 📋 Phases
@@ -20,15 +20,15 @@
 
 ### ✅ JSON Validation
 
-- Passed: 8
+- Passed: 10
 - Failed: 0
 - Warnings: 0
 
 ### ✅ JavaScript Syntax
 
-- Passed: 24
+- Passed: 32
 - Failed: 0
-- Warnings: 24
+- Warnings: 32
 
 ## 🚀 Deployment Recommendation
 

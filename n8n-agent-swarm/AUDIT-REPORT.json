@@ -1,10 +1,10 @@
 {
-  "timestamp": "2025-11-15T20:29:14.894Z",
+  "timestamp": "2025-11-15T22:06:29.867Z",
   "summary": {
-    "totalTests": 60,
-    "passed": 60,
+    "totalTests": 70,
+    "passed": 70,
     "failed": 0,
-    "warnings": 24,
+    "warnings": 32,
     "successRate": "100.0"
   },
   "phases": [
@@ -178,11 +178,21 @@
     },
     {
       "phase": "JSON Validation",
-      "passed": 8,
+      "passed": 10,
       "failed": 0,
       "warnings": 0,
       "details": {
         "valid": [
+          {
+            "path": "AUDIT-REPORT.json",
+            "size": 14730,
+            "keys": 3
+          },
+          {
+            "path": "SIMULATION-REPORT.json",
+            "size": 2803,
+            "keys": 7
+          },
           {
             "path": "n8n-workflows/backup/main-workflow-pre-meta.json",
             "size": 20266,
@@ -227,17 +237,17 @@
         "invalid": [],
         "warnings": [],
         "stats": {
-          "totalFiles": 8,
-          "totalSize": 116516,
-          "filesChecked": 8
+          "totalFiles": 10,
+          "totalSize": 134049,
+          "filesChecked": 10
         }
       }
     },
     {
       "phase": "JavaScript Syntax",
-      "passed": 24,
+      "passed": 32,
       "failed": 0,
-      "warnings": 24,
+      "warnings": 32,
       "details": {
         "valid": [
           {
@@ -249,6 +259,31 @@
             "path": "scripts/add-meta-agent.js",
             "size": 6626,
             "lines": 194
+          },
+          {
+            "path": "scripts/agents/code-assistant-pro.js",
+            "size": 4207,
+            "lines": 200
+          },
+          {
+            "path": "scripts/agents/content-creator-pro.js",
+            "size": 4919,
+            "lines": 176
+          },
+          {
+            "path": "scripts/agents/research-agent-pro.js",
+            "size": 4427,
+            "lines": 156
+          },
+          {
+            "path": "scripts/ai-core/intelligent-router-pro.js",
+            "size": 12002,
+            "lines": 476
+          },
+          {
+            "path": "scripts/ai-core/llm-clients.js",
+            "size": 8828,
+            "lines": 367
           },
           {
             "path": "scripts/ai-router/intelligent-model-router.js",
@@ -284,6 +319,16 @@
             "path": "scripts/learning-system.js",
             "size": 14537,
             "lines": 468
+          },
+          {
+            "path": "scripts/monitoring/budget-guardian.js",
+            "size": 10253,
+            "lines": 375
+          },
+          {
+            "path": "scripts/optimization/mega-cache.js",
+            "size": 10491,
+            "lines": 441
           },
           {
             "path": "scripts/optimize-prompts.js",
@@ -329,6 +374,11 @@
             "path": "scripts/test-agents.js",
             "size": 6827,
             "lines": 284
+          },
+          {
+            "path": "scripts/test-complete-system.js",
+            "size": 21370,
+            "lines": 593
           },
           {
             "path": "scripts/trigger-agent-creation.js",
@@ -377,6 +427,37 @@
             ]
           },
           {
+            "path": "scripts/agents/code-assistant-pro.js",
+            "warnings": [
+              "Missing \"use strict\" directive"
+            ]
+          },
+          {
+            "path": "scripts/agents/content-creator-pro.js",
+            "warnings": [
+              "Missing \"use strict\" directive"
+            ]
+          },
+          {
+            "path": "scripts/agents/research-agent-pro.js",
+            "warnings": [
+              "Missing \"use strict\" directive"
+            ]
+          },
+          {
+            "path": "scripts/ai-core/intelligent-router-pro.js",
+            "warnings": [
+              "Missing \"use strict\" directive",
+              "Many console.log statements (14) - consider using logger"
+            ]
+          },
+          {
+            "path": "scripts/ai-core/llm-clients.js",
+            "warnings": [
+              "Missing \"use strict\" directive"
+            ]
+          },
+          {
             "path": "scripts/ai-router/intelligent-model-router.js",
             "warnings": [
               "Missing \"use strict\" directive"
@@ -418,6 +499,20 @@
             "path": "scripts/learning-system.js",
             "warnings": [
               "Missing \"use strict\" directive"
+            ]
+          },
+          {
+            "path": "scripts/monitoring/budget-guardian.js",
+            "warnings": [
+              "Missing \"use strict\" directive",
+              "Many console.log statements (14) - consider using logger"
+            ]
+          },
+          {
+            "path": "scripts/optimization/mega-cache.js",
+            "warnings": [
+              "Missing \"use strict\" directive",
+              "Many console.log statements (19) - consider using logger"
             ]
           },
           {
@@ -479,6 +574,12 @@
             ]
           },
           {
+            "path": "scripts/test-complete-system.js",
+            "warnings": [
+              "Missing \"use strict\" directive"
+            ]
+          },
+          {
             "path": "scripts/trigger-agent-creation.js",
             "warnings": [
               "Missing \"use strict\" directive"
@@ -520,10 +621,10 @@
           }
         ],
         "stats": {
-          "totalFiles": 24,
-          "totalLines": 8365,
-          "totalSize": 235204,
-          "filesChecked": 24
+          "totalFiles": 32,
+          "totalLines": 11149,
+          "totalSize": 311701,
+          "filesChecked": 32
         }
       }
     }
