@@ -301,6 +301,18 @@ class IntelligentRouterPro {
    * Select best model based on complexity and budget
    */
   selectModel(complexity, budgetRec, options) {
+    // Check for DEFAULT_MODEL environment variable
+    // This allows using a single model (e.g., gpt-4o-mini) for simplicity
+    const defaultModel = process.env.DEFAULT_MODEL;
+    if (defaultModel && this.models[defaultModel]) {
+      console.log(`🎯 Using default model: ${defaultModel} (set via DEFAULT_MODEL env var)`);
+      return {
+        name: defaultModel,
+        ...this.models[defaultModel]
+      };
+    }
+
+    // Standard multi-model intelligent selection
     let candidates = Object.entries(this.models)
       .filter(([name, model]) => {
         // Quality filter
