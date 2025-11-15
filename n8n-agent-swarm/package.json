@@ -41,6 +41,7 @@
     "audit:json": "node scripts/validation/json-validator.js",
     "audit:js": "node scripts/validation/js-syntax-checker.js",
     "simulate": "node scripts/test-complete-system.js",
+    "test:simple": "node scripts/test-simple-ai.js",
     "postinstall": "echo '✅ Setup complete! Run: npm start (Linux/Mac) or npm run start:windows (Windows)'",
     "prod": "NODE_ENV=production docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d"
   },
