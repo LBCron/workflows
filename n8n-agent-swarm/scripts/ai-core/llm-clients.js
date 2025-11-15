@@ -60,9 +60,19 @@ class BaseLLMClient {
            (outputTokens / 1000) * this.config.pricing.output;
   }
 
+  // Alias for estimateCost
+  calculateCost(inputTokens, outputTokens) {
+    return this.estimateCost(inputTokens, outputTokens);
+  }
+
   countTokens(text) {
     // Approximation simple: 1 token ≈ 4 caractères
     return Math.ceil(text.length / 4);
+  }
+
+  // Alias for countTokens
+  estimateTokens(text) {
+    return this.countTokens(text);
   }
 }
 
@@ -324,6 +334,7 @@ class LLMClientFactory {
 }
 
 module.exports = {
+  BaseLLMClient,
   OpenAIClient,
   AnthropicClient,
   GroqClient,

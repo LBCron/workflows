@@ -258,13 +258,15 @@ class MegaCache {
     avgHitCount = this.cache.size > 0 ? avgHitCount / this.cache.size : 0;
 
     return {
+      size: this.cache.size,
       entries: this.cache.size,
       maxEntries: this.config.maxEntries,
       hits: this.stats.hits,
       misses: this.stats.misses,
       sets: this.stats.sets,
       evictions: this.stats.evictions,
-      hitRate: hitRate.toFixed(1) + '%',
+      hitRate: parseFloat(hitRate.toFixed(1)),
+      hitRateFormatted: hitRate.toFixed(1) + '%',
       totalRequests: total,
       savedCost: `€${savedCost.toFixed(4)}`,
       avgSize: Math.round(avgSize),
@@ -353,14 +355,15 @@ if (require.main === module) {
     const command = process.argv[2] || 'stats';
 
     switch (command) {
-      case 'stats':
+      case 'stats': {
         await megaCache.load();
         const stats = megaCache.getStats();
         console.log('\n📊 Cache Statistics:\n');
         console.log(JSON.stringify(stats, null, 2));
         break;
+      }
 
-      case 'top':
+      case 'top': {
         await megaCache.load();
         const top = megaCache.getTopHits();
         console.log('\n🔥 Top Cache Hits:\n');
@@ -368,27 +371,31 @@ if (require.main === module) {
           console.log(`${i + 1}. "${entry.prompt}" - ${entry.hits} hits (${entry.age} days old)`);
         });
         break;
+      }
 
-      case 'cleanup':
+      case 'cleanup': {
         await megaCache.load();
         const removed = megaCache.cleanup();
         console.log(`✅ Removed ${removed} expired entries`);
         await megaCache.save();
         break;
+      }
 
-      case 'clear':
+      case 'clear': {
         await megaCache.load();
         megaCache.clear();
         await megaCache.save();
         console.log('✅ Cache cleared');
         break;
+      }
 
-      case 'save':
+      case 'save': {
         await megaCache.load();
         await megaCache.save();
         break;
+      }
 
-      case 'test':
+      case 'test': {
         console.log('\n🧪 Testing cache...\n');
         await megaCache.load();
 
@@ -410,6 +417,7 @@ if (require.main === module) {
 
         await megaCache.save();
         break;
+      }
 
       default:
         console.log(`

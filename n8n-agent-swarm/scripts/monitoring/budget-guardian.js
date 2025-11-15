@@ -176,8 +176,10 @@ class BudgetGuardian {
     return {
       month: this.data.month,
       limit: this.config.monthlyLimit,
-      spent: this.data.totalSpent.toFixed(4),
-      remaining: remaining.toFixed(4),
+      spent: this.data.totalSpent,
+      remaining: remaining,
+      spentFormatted: this.data.totalSpent.toFixed(4),
+      remainingFormatted: remaining.toFixed(4),
       percentage: percentUsed.toFixed(1),
       status: this.getStatusLevel(percentUsed),
       transactionCount: this.data.transactions.length,
@@ -269,35 +271,43 @@ class BudgetGuardian {
 
     if (percentUsed >= 95) {
       return {
+        status: 'EMERGENCY',
         level: 'EMERGENCY',
         message: 'Use FREE models only (Llama, cache)',
         allowPremium: false,
         allowStandard: false,
-        cacheOnly: false
+        cacheOnly: false,
+        allowedModels: ['llama-3-70b']
       };
     } else if (percentUsed >= 90) {
       return {
+        status: 'CRITICAL',
         level: 'CRITICAL',
         message: 'Prefer FREE models, Mini for important tasks only',
         allowPremium: false,
         allowStandard: false,
-        preferFree: true
+        preferFree: true,
+        allowedModels: ['llama-3-70b', 'gpt-4o-mini', 'claude-3-haiku', 'gemini-flash']
       };
     } else if (percentUsed >= 75) {
       return {
+        status: 'WARNING',
         level: 'WARNING',
         message: 'Use Mini/Haiku, avoid GPT-4/Opus unless critical',
         allowPremium: false,
         allowStandard: true,
-        preferCheap: true
+        preferCheap: true,
+        allowedModels: ['llama-3-70b', 'gpt-4o-mini', 'claude-3-haiku', 'gemini-flash', 'claude-3-sonnet']
       };
     } else {
       return {
+        status: 'HEALTHY',
         level: 'HEALTHY',
         message: 'All models available',
         allowPremium: true,
         allowStandard: true,
-        preferCheap: false
+        preferCheap: false,
+        allowedModels: 'all'
       };
     }
   }

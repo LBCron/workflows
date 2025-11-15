@@ -119,7 +119,7 @@ class ContentCreatorPro {
     return this.qualities.standard;
   }
 
-  buildPrompt(type, topic, level, options) {
+  buildPrompt(type, topic, level, options = {}) {
     let prompt = `Crée un ${type} de qualité ${level.name} sur le sujet:\n\n"${topic}"\n\n`;
 
     // Template

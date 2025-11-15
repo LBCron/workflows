@@ -1,0 +1,130 @@
+{
+  "timestamp": "2025-11-15T22:05:25.680Z",
+  "totalTests": 30,
+  "passed": 30,
+  "failed": 0,
+  "warnings": 5,
+  "bugs": [],
+  "tests": [
+    {
+      "name": "Budget Guardian - Module Loads",
+      "status": "passed"
+    },
+    {
+      "name": "Budget Guardian - Get Status",
+      "status": "passed"
+    },
+    {
+      "name": "Budget Guardian - Get Recommendation",
+      "status": "passed"
+    },
+    {
+      "name": "Budget Guardian - Low Cost Check",
+      "status": "passed"
+    },
+    {
+      "name": "Mega Cache - Module Loads",
+      "status": "passed"
+    },
+    {
+      "name": "Mega Cache - Normalization",
+      "status": "passed"
+    },
+    {
+      "name": "Mega Cache - Set and Get",
+      "status": "passed"
+    },
+    {
+      "name": "Mega Cache - Case Insensitive",
+      "status": "passed"
+    },
+    {
+      "name": "Mega Cache - Get Stats",
+      "status": "passed"
+    },
+    {
+      "name": "LLM Clients - Module Loads",
+      "status": "passed"
+    },
+    {
+      "name": "LLM Clients - Factory Create",
+      "status": "passed"
+    },
+    {
+      "name": "LLM Clients - Get Default Client",
+      "status": "passed"
+    },
+    {
+      "name": "LLM Clients - Token Estimation",
+      "status": "passed"
+    },
+    {
+      "name": "LLM Clients - Cost Calculation",
+      "status": "passed"
+    },
+    {
+      "name": "Intelligent Router - Module Loads",
+      "status": "passed"
+    },
+    {
+      "name": "Intelligent Router - Complexity Analysis Simple",
+      "status": "passed"
+    },
+    {
+      "name": "Intelligent Router - Complexity Analysis Complex",
+      "status": "passed"
+    },
+    {
+      "name": "Intelligent Router - Model Selection",
+      "status": "passed"
+    },
+    {
+      "name": "Research Agent - Module Loads",
+      "status": "passed"
+    },
+    {
+      "name": "Research Agent - Depth Detection Quick",
+      "status": "passed"
+    },
+    {
+      "name": "Research Agent - Depth Detection Expert",
+      "status": "passed"
+    },
+    {
+      "name": "Research Agent - Build Prompt",
+      "status": "passed"
+    },
+    {
+      "name": "Content Creator - Module Loads",
+      "status": "passed"
+    },
+    {
+      "name": "Content Creator - Quality Detection Basic",
+      "status": "passed"
+    },
+    {
+      "name": "Content Creator - Quality Detection Premium",
+      "status": "passed"
+    },
+    {
+      "name": "Content Creator - Build Prompt",
+      "status": "passed"
+    },
+    {
+      "name": "Code Assistant - Module Loads",
+      "status": "passed"
+    },
+    {
+      "name": "Code Assistant - Build Prompt Generate",
+      "status": "passed"
+    },
+    {
+      "name": "Code Assistant - Build Prompt Debug",
+      "status": "passed"
+    },
+    {
+      "name": "Code Assistant - Parse Code Response",
+      "status": "passed"
+    }
+  ]
+}
