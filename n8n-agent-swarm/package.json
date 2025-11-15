@@ -6,12 +6,14 @@
   "scripts": {
     "setup": "bash scripts/setup.sh",
     "start": "docker-compose up -d && sleep 10 && npm run auto-import",
+    "start:windows": "scripts\\start-n8n.bat",
     "start:dev": "docker-compose up",
     "stop": "docker-compose down",
     "logs": "docker-compose logs -f n8n",
     "restart": "docker-compose restart n8n",
     "import-workflow": "node scripts/import-workflow.js",
     "auto-import": "bash scripts/auto-import.sh",
+    "auto-import:windows": "powershell -ExecutionPolicy Bypass -File scripts\\auto-import.ps1",
     "configure": "node scripts/configure-credentials.js",
     "validate": "node scripts/validate-workflow.js",
     "deploy": "node scripts/deploy-workflow.js",
@@ -21,7 +23,7 @@
     "generate-agent": "node scripts/generate-agent.js",
     "add-meta": "node scripts/add-meta-agent.js",
     "quick-import": "bash scripts/quick-import.sh",
-    "postinstall": "echo '✅ Setup complete! Run: npm start'",
+    "postinstall": "echo '✅ Setup complete! Run: npm start (Linux/Mac) or npm run start:windows (Windows)'",
     "prod": "NODE_ENV=production docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d"
   },
   "keywords": [
