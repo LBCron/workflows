@@ -1,0 +1,191 @@
+{
+  "$schema": "./my-habits.schema.json",
+  "version": "1.0.0",
+  "last_updated": "2024-01-15T10:00:00Z",
+
+  "detected_patterns": [
+    {
+      "id": "pattern_001",
+      "category": "work_schedule",
+      "pattern": "Works on automation projects in the morning",
+      "description": "User typically starts working on technical projects between 9-11 AM",
+      "frequency": "daily",
+      "occurrences": 15,
+      "confidence": 0.85,
+      "first_detected": "2024-01-05T00:00:00Z",
+      "last_occurrence": "2024-01-15T09:00:00Z",
+      "days_of_week": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+      "time_range": {
+        "start": "09:00",
+        "end": "11:00"
+      },
+      "enabled": true,
+      "actions": [
+        {
+          "type": "reminder",
+          "description": "Best time for complex tasks",
+          "trigger": "09:00"
+        }
+      ]
+    },
+    {
+      "id": "pattern_002",
+      "category": "communication",
+      "pattern": "Prefers Telegram for quick updates",
+      "description": "User consistently uses Telegram for brief communications",
+      "frequency": "daily",
+      "occurrences": 30,
+      "confidence": 0.95,
+      "first_detected": "2024-01-03T00:00:00Z",
+      "last_occurrence": "2024-01-15T10:00:00Z",
+      "context": "Quick messages, status updates, file sharing",
+      "enabled": true
+    }
+  ],
+
+  "frequent_actions": [
+    {
+      "id": "action_001",
+      "action": "Check project status",
+      "command_variations": ["status", "what's the progress", "how's it going"],
+      "frequency_per_day": 2.5,
+      "typical_times": ["09:30", "17:00"],
+      "context": "Usually checks in morning and before end of day",
+      "quick_response_template": "📊 Project Status:\n• Active: {active_projects}\n• Completed today: {completed_tasks}\n• Next up: {next_task}",
+      "confidence": 0.90
+    },
+    {
+      "id": "action_002",
+      "action": "Deploy to Fly.io",
+      "command_variations": ["deploy", "push to fly", "update production"],
+      "frequency_per_week": 5,
+      "typical_day": "friday",
+      "typical_time": "16:00",
+      "context": "Usually deploys before weekend",
+      "quick_command": "npm run deploy:fly",
+      "confidence": 0.80
+    },
+    {
+      "id": "action_003",
+      "action": "Run tests",
+      "command_variations": ["test", "run tests", "check tests"],
+      "frequency_per_day": 3,
+      "context": "Before commits and deployments",
+      "quick_command": "npm test",
+      "confidence": 0.85
+    }
+  ],
+
+  "preferences_learned": [
+    {
+      "id": "pref_001",
+      "category": "communication_style",
+      "preference": "Concise responses with clear action items",
+      "examples": [
+        "Prefers bullet points over paragraphs",
+        "Wants direct answers without excessive context"
+      ],
+      "confidence": 0.95,
+      "learned_at": "2024-01-08T00:00:00Z"
+    },
+    {
+      "id": "pref_002",
+      "category": "tooling",
+      "preference": "One-command solutions",
+      "examples": [
+        "Requested auto-import script",
+        "Prefers 'npm start' over manual steps"
+      ],
+      "confidence": 0.90,
+      "learned_at": "2024-01-12T00:00:00Z"
+    },
+    {
+      "id": "pref_003",
+      "category": "documentation",
+      "preference": "Practical examples over theory",
+      "examples": [
+        "Prefers code snippets",
+        "Values step-by-step guides"
+      ],
+      "confidence": 0.88,
+      "learned_at": "2024-01-10T00:00:00Z"
+    }
+  ],
+
+  "optimization_suggestions": [
+    {
+      "id": "opt_001",
+      "suggestion": "Create shortcut for 'npm test && npm run deploy:fly'",
+      "reasoning": "User frequently runs tests before deployment",
+      "impact": "high",
+      "implementation": "Add 'deploy:safe' script to package.json",
+      "status": "pending",
+      "created_at": "2024-01-15T00:00:00Z"
+    },
+    {
+      "id": "opt_002",
+      "suggestion": "Auto-remind about project status check at 9:30 AM",
+      "reasoning": "User checks project status every morning around this time",
+      "impact": "medium",
+      "implementation": "Add calendar reminder",
+      "status": "pending",
+      "created_at": "2024-01-15T00:00:00Z"
+    }
+  ],
+
+  "temporal_patterns": {
+    "most_productive_hours": ["09:00-12:00", "14:00-17:00"],
+    "preferred_meeting_times": ["10:00", "14:00", "15:00"],
+    "low_activity_periods": ["12:00-13:00", "18:00-22:00"],
+    "typical_work_days": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+    "weekend_activity": "minimal"
+  },
+
+  "context_switches": {
+    "average_per_day": 8,
+    "typical_duration_minutes": 45,
+    "recovery_time_minutes": 5,
+    "most_common_switches": [
+      "coding → documentation",
+      "planning → implementation",
+      "testing → debugging"
+    ]
+  },
+
+  "learning_velocity": {
+    "new_patterns_detected_last_7_days": 3,
+    "patterns_confirmed_last_7_days": 5,
+    "patterns_invalidated_last_7_days": 1,
+    "overall_confidence_trend": "increasing"
+  },
+
+  "automation_opportunities": [
+    {
+      "id": "auto_001",
+      "opportunity": "Auto-run tests before asking to deploy",
+      "pattern_basis": "action_002 + action_003",
+      "confidence": 0.85,
+      "potential_time_saved_minutes_per_week": 15,
+      "implementation_complexity": "low"
+    },
+    {
+      "id": "auto_002",
+      "opportunity": "Proactive morning project summary",
+      "pattern_basis": "pattern_001 + action_001",
+      "confidence": 0.80,
+      "potential_time_saved_minutes_per_week": 20,
+      "implementation_complexity": "medium"
+    }
+  ],
+
+  "metadata": {
+    "version": "1.0.0",
+    "total_patterns": 2,
+    "total_actions": 3,
+    "total_preferences": 3,
+    "analysis_period_days": 30,
+    "created_at": "2024-01-10T00:00:00Z",
+    "last_analysis": "2024-01-15T10:00:00Z",
+    "next_analysis": "2024-01-16T10:00:00Z"
+  }
+}

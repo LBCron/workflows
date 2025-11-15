@@ -31,6 +31,11 @@
     "optimize": "node scripts/optimize-prompts.js",
     "analyze": "echo 'Analytics dashboard - implement scripts/analytics-dashboard.js'",
     "feedback": "echo 'Feedback loop - implement scripts/feedback-loop.js'",
+    "storage:init": "node scripts/phone-storage/init-storage.js",
+    "storage:sync": "node scripts/phone-storage/telegram-file-handler.js sync",
+    "storage:status": "node scripts/phone-storage/telegram-file-handler.js status",
+    "storage:backup": "node scripts/phone-storage/telegram-file-handler.js backup",
+    "storage:clear": "node scripts/phone-storage/telegram-file-handler.js clear",
     "postinstall": "echo '✅ Setup complete! Run: npm start (Linux/Mac) or npm run start:windows (Windows)'",
     "prod": "NODE_ENV=production docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d"
   },

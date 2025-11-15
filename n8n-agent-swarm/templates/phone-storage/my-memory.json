@@ -1,0 +1,160 @@
+{
+  "$schema": "./my-memory.schema.json",
+  "version": "1.0.0",
+  "last_updated": "2024-01-15T10:00:00Z",
+
+  "context": {
+    "recent_conversations": [
+      {
+        "id": "conv_001",
+        "timestamp": "2024-01-15T09:30:00Z",
+        "summary": "Discussed n8n-agent-swarm deployment to Fly.io",
+        "topics": ["deployment", "fly.io", "automation"],
+        "sentiment": "positive",
+        "action_items": []
+      }
+    ],
+    "current_focus": {
+      "primary": "Building n8n multi-agent system",
+      "secondary": "Learning about AI automation",
+      "updated_at": "2024-01-15T10:00:00Z"
+    },
+    "last_session": {
+      "timestamp": "2024-01-15T09:00:00Z",
+      "duration_minutes": 45,
+      "tasks_completed": 3,
+      "satisfaction": "high"
+    }
+  },
+
+  "projects": {
+    "active": [
+      {
+        "id": "proj_001",
+        "name": "n8n-agent-swarm",
+        "description": "Multi-agent automation system with self-learning capabilities",
+        "status": "in_progress",
+        "priority": "high",
+        "started_at": "2024-01-10T00:00:00Z",
+        "deadline": null,
+        "progress": 0.75,
+        "milestones": [
+          {
+            "name": "Deploy to Fly.io",
+            "completed": true,
+            "completed_at": "2024-01-14T00:00:00Z"
+          },
+          {
+            "name": "Add learning system",
+            "completed": true,
+            "completed_at": "2024-01-15T00:00:00Z"
+          },
+          {
+            "name": "Add memory system",
+            "completed": false,
+            "target_date": "2024-01-16T00:00:00Z"
+          }
+        ],
+        "notes": "Priority project - personal AI assistant"
+      }
+    ],
+    "completed": [],
+    "on_hold": []
+  },
+
+  "deadlines": {
+    "upcoming": [
+      {
+        "id": "deadline_001",
+        "title": "Complete memory system implementation",
+        "due_date": "2024-01-16T23:59:59Z",
+        "priority": "high",
+        "related_project": "proj_001",
+        "reminder_sent": false
+      }
+    ],
+    "overdue": []
+  },
+
+  "important_facts": {
+    "personal": [
+      {
+        "category": "preferences",
+        "fact": "Prefers concise, actionable responses",
+        "learned_at": "2024-01-10T00:00:00Z",
+        "confidence": 0.95
+      },
+      {
+        "category": "work_style",
+        "fact": "Works on multiple projects simultaneously",
+        "learned_at": "2024-01-12T00:00:00Z",
+        "confidence": 0.85
+      }
+    ],
+    "technical": [
+      {
+        "category": "skills",
+        "fact": "Familiar with n8n, Docker, and automation workflows",
+        "learned_at": "2024-01-10T00:00:00Z",
+        "confidence": 0.90
+      },
+      {
+        "category": "environment",
+        "fact": "Uses Windows with Docker Desktop",
+        "learned_at": "2024-01-13T00:00:00Z",
+        "confidence": 1.0
+      }
+    ],
+    "context": [
+      {
+        "category": "location",
+        "fact": "Based in France, Paris timezone",
+        "learned_at": "2024-01-10T00:00:00Z",
+        "confidence": 1.0
+      }
+    ]
+  },
+
+  "quick_references": {
+    "frequently_used": {
+      "project_path": "C:\\Users\\Ronan\\OneDrive\\桌面\\workflow",
+      "n8n_url": "http://localhost:5678",
+      "main_email": "",
+      "telegram_chat_id": ""
+    },
+    "shortcuts": {
+      "deploy": "npm run deploy:fly",
+      "test": "npm test",
+      "start": "npm start"
+    }
+  },
+
+  "learning_data": {
+    "successful_patterns": [
+      {
+        "pattern": "User prefers one-command solutions over multi-step processes",
+        "examples": ["Created auto-import script", "Setup shell scripts"],
+        "confidence": 0.90,
+        "learned_at": "2024-01-13T00:00:00Z"
+      }
+    ],
+    "failed_attempts": [],
+    "optimization_opportunities": []
+  },
+
+  "session_state": {
+    "context_loaded": true,
+    "last_sync": "2024-01-15T10:00:00Z",
+    "pending_updates": false,
+    "cache_expires_at": "2024-01-15T16:00:00Z"
+  },
+
+  "metadata": {
+    "version": "1.0.0",
+    "total_conversations": 50,
+    "total_tasks_completed": 127,
+    "average_satisfaction": 0.92,
+    "created_at": "2024-01-10T00:00:00Z",
+    "last_backup": "2024-01-15T10:00:00Z"
+  }
+}

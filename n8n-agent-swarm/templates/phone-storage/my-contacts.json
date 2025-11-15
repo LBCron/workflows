@@ -1,0 +1,106 @@
+{
+  "$schema": "./my-contacts.schema.json",
+  "version": "1.0.0",
+  "last_updated": "2024-01-15T10:00:00Z",
+
+  "contacts": [
+    {
+      "id": "contact_001",
+      "name": "Example Contact",
+      "email": "example@company.com",
+      "phone": "",
+      "company": "Example Corp",
+      "role": "Colleague",
+      "tags": ["work", "project_team"],
+      "context": {
+        "relationship": "colleague",
+        "how_we_met": "Work project",
+        "communication_frequency": "weekly",
+        "last_contact": "2024-01-14T00:00:00Z",
+        "preferred_channel": "email",
+        "timezone": "Europe/Paris"
+      },
+      "preferences": {
+        "tone": "professional",
+        "formality": "formal",
+        "response_time_expectation": "within_24h",
+        "meeting_preference": "morning"
+      },
+      "interaction_history": {
+        "total_emails": 15,
+        "total_meetings": 3,
+        "last_email_sent": "2024-01-14T10:00:00Z",
+        "last_email_received": "2024-01-14T15:30:00Z",
+        "last_meeting": "2024-01-10T14:00:00Z",
+        "common_topics": ["project updates", "technical discussions"]
+      },
+      "notes": [
+        {
+          "timestamp": "2024-01-10T00:00:00Z",
+          "note": "Prefers detailed technical explanations",
+          "category": "communication_style"
+        }
+      ],
+      "important_dates": [],
+      "created_at": "2024-01-05T00:00:00Z",
+      "updated_at": "2024-01-14T00:00:00Z"
+    }
+  ],
+
+  "groups": [
+    {
+      "id": "group_001",
+      "name": "Work Team",
+      "members": ["contact_001"],
+      "purpose": "Project collaboration",
+      "communication_channel": "email",
+      "group_email": "team@company.com",
+      "notes": "Main project team for n8n automation"
+    }
+  ],
+
+  "shortcuts": {
+    "boss": null,
+    "team": "group_001",
+    "client": null,
+    "family": null,
+    "emergency": null
+  },
+
+  "templates": {
+    "email_signatures": {
+      "professional": "Best regards,\nRonan",
+      "casual": "Cheers,\nRonan",
+      "formal": "Sincerely,\nRonan"
+    },
+    "common_responses": {
+      "meeting_accept": "Thanks! I've added it to my calendar. See you then!",
+      "meeting_decline": "Thanks for the invitation, but I won't be able to make it. Can we reschedule?",
+      "follow_up": "Just following up on my previous message. Let me know if you need any clarification."
+    }
+  },
+
+  "communication_stats": {
+    "most_contacted": [],
+    "response_rate": 0.95,
+    "average_response_time_hours": 4.5,
+    "preferred_contact_time": {
+      "start": "09:00",
+      "end": "17:00"
+    }
+  },
+
+  "privacy": {
+    "data_sharing": false,
+    "sync_to_cloud": false,
+    "encrypted": false
+  },
+
+  "metadata": {
+    "version": "1.0.0",
+    "total_contacts": 1,
+    "total_groups": 1,
+    "created_at": "2024-01-10T00:00:00Z",
+    "last_sync": "2024-01-15T10:00:00Z"
+  }
+}

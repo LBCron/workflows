@@ -1,0 +1,111 @@
+{
+  "$schema": "./my-profile.schema.json",
+  "version": "1.0.0",
+  "last_updated": "2024-01-15T10:00:00Z",
+
+  "user": {
+    "name": "Ronan",
+    "timezone": "Europe/Paris",
+    "language": "fr",
+    "preferred_name": "Ronan",
+    "pronouns": "he/him"
+  },
+
+  "communication": {
+    "tone": "casual",
+    "verbosity": "concise",
+    "emoji_usage": "moderate",
+    "confirmation_preference": "ask_for_important",
+    "notification_hours": {
+      "start": "08:00",
+      "end": "22:00"
+    }
+  },
+
+  "work_schedule": {
+    "timezone": "Europe/Paris",
+    "working_days": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+    "working_hours": {
+      "start": "09:00",
+      "end": "18:00"
+    },
+    "lunch_break": {
+      "start": "12:00",
+      "end": "13:00"
+    },
+    "focus_blocks": [
+      {
+        "name": "Deep Work Morning",
+        "days": ["tuesday", "thursday"],
+        "start": "09:00",
+        "end": "12:00",
+        "do_not_disturb": true
+      }
+    ]
+  },
+
+  "budget": {
+    "currency": "EUR",
+    "monthly_limit": 50.00,
+    "current_month_usage": 0.00,
+    "alert_threshold": 0.80,
+    "cost_tracking": {
+      "gpt4_input_per_1k": 0.01,
+      "gpt4_output_per_1k": 0.03,
+      "api_calls_monthly_limit": 10000
+    }
+  },
+
+  "preferences": {
+    "email": {
+      "default_signature": true,
+      "auto_archive_after_days": 30,
+      "priority_senders": [],
+      "auto_reply_when_busy": false
+    },
+    "calendar": {
+      "default_event_duration_minutes": 30,
+      "buffer_between_meetings_minutes": 15,
+      "default_reminder_minutes": 15,
+      "working_location": "home"
+    },
+    "search": {
+      "default_search_engine": "google",
+      "safe_search": true,
+      "max_results": 5
+    }
+  },
+
+  "integrations": {
+    "gmail": {
+      "enabled": true,
+      "primary_email": "",
+      "auto_labels": true
+    },
+    "google_calendar": {
+      "enabled": true,
+      "primary_calendar": "primary",
+      "show_declined_events": false
+    },
+    "telegram": {
+      "enabled": true,
+      "chat_id": "",
+      "notifications": true
+    }
+  },
+
+  "privacy": {
+    "data_retention_days": 90,
+    "auto_delete_old_conversations": false,
+    "share_usage_analytics": false,
+    "encrypted_storage": false
+  },
+
+  "system": {
+    "version": "1.0.0",
+    "created_at": "2024-01-15T10:00:00Z",
+    "last_synced": "2024-01-15T10:00:00Z",
+    "sync_frequency_hours": 1,
+    "auto_backup": true
+  }
+}
