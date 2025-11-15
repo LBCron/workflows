@@ -186,6 +186,7 @@ fly status
 
 - 📘 [Installation Guide](docs/INSTALLATION.md) - Detailed setup instructions
 - 🚀 [Deploy to Fly.io](DEPLOY-FLYIO.md) - Production deployment guide
+- 🤖 [Automated Agent Creation](AUTOMATION.md) - **NEW!** Create agents from Telegram
 - 🏛️ [Architecture](docs/ARCHITECTURE.md) - System design and data flow
 - 🔧 [Troubleshooting](docs/TROUBLESHOOTING.md) - Common issues and solutions
 - 🔑 [API Keys Setup](docs/API-KEYS.md) - How to obtain all required API keys
@@ -193,17 +194,40 @@ fly status
 
 ## 💡 Usage Examples
 
-### 🔮 Self-Evolution (NEW!)
-```
-You: "Add a Snapchat agent so I can post stories via Telegram"
-Bot: ✅ Snapchat Agent created!
-     • Generated agent configuration
-     • Created API integration
-     • Updated workflow
-     • Committed to GitHub
+### 🤖 Automated Agent Creation (REVOLUTIONARY!)
 
-     Try: "Post a Snapchat story saying Hello World!"
+**Create and deploy new agents directly from Telegram!**
+
 ```
+You: "Create a Twitter agent for posting tweets"
+
+Bot: 🔮 Meta Agent activated!
+
+     Creating Twitter Agent...
+
+     ✅ Automation triggered
+     📊 GitHub Actions is processing
+     ⏰ Expected completion: 3-5 minutes
+
+     You'll receive a notification when deployed.
+
+[3 minutes later...]
+
+Bot: ✅ Twitter Agent Deployed!
+
+     🤖 Ready to use
+
+     📋 What was done:
+     • Created agent configuration
+     • Updated n8n workflow
+     • Deployed to Fly.io
+
+     🎯 Try: "Use Twitter to post a tweet"
+```
+
+**That's it! Fully automated from Telegram message to production deployment.**
+
+**[📖 Setup Guide →](AUTOMATION.md)**
 
 ### Single Agent Request
 ```

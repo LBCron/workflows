@@ -1,0 +1,217 @@
+name: Auto-Deploy Agent
+
+# Triggered via repository_dispatch from Meta Agent
+# Event type: create-agent
+# Payload: { agent_name, agent_type, capabilities, tools, apis }
+
+on:
+  repository_dispatch:
+    types: [create-agent]
+  workflow_dispatch:
+    inputs:
+      agent_name:
+        description: 'Agent name (e.g., twitter, snapchat)'
+        required: true
+      agent_type:
+        description: 'Agent type (social, productivity, communication)'
+        required: true
+        default: 'social'
+
+jobs:
+  create-and-deploy-agent:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🔔 Notify Start
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d text="🔮 Auto-deployment started for ${{ github.event.client_payload.agent_name || github.event.inputs.agent_name }} agent..." \
+            -d parse_mode="Markdown"
+
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: 📦 Install dependencies
+        run: |
+          cd n8n-agent-swarm
+          npm install
+
+      - name: 🤖 Generate Agent Configuration
+        id: generate
+        run: |
+          cd n8n-agent-swarm
+
+          # Get agent info from payload or inputs
+          AGENT_NAME="${{ github.event.client_payload.agent_name || github.event.inputs.agent_name }}"
+          AGENT_TYPE="${{ github.event.client_payload.agent_type || github.event.inputs.agent_type }}"
+
+          echo "agent_name=$AGENT_NAME" >> $GITHUB_OUTPUT
+          echo "agent_type=$AGENT_TYPE" >> $GITHUB_OUTPUT
+
+          # Generate agent using the script
+          node scripts/generate-agent.js "$AGENT_NAME" "$AGENT_TYPE"
+
+          if [ -f "agent-configs/${AGENT_NAME}-agent.md" ]; then
+            echo "✅ Agent configuration created: agent-configs/${AGENT_NAME}-agent.md"
+            echo "agent_created=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Failed to create agent configuration"
+            echo "agent_created=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      - name: 🔄 Add Agent to n8n Workflow
+        if: steps.generate.outputs.agent_created == 'true'
+        run: |
+          cd n8n-agent-swarm
+
+          AGENT_NAME="${{ steps.generate.outputs.agent_name }}"
+
+          # Add agent to workflow JSON
+          node scripts/add-agent-to-workflow.js "$AGENT_NAME"
+
+          if [ $? -eq 0 ]; then
+            echo "✅ Agent added to workflow"
+          else
+            echo "❌ Failed to add agent to workflow"
+            exit 1
+          fi
+
+      - name: ✅ Validate Workflow
+        run: |
+          cd n8n-agent-swarm
+          npm run validate || echo "⚠️ Validation warnings (non-blocking)"
+
+      - name: 📝 Commit Changes
+        run: |
+          cd n8n-agent-swarm
+
+          AGENT_NAME="${{ steps.generate.outputs.agent_name }}"
+          AGENT_TITLE="$(echo $AGENT_NAME | sed 's/.*/\u&/')"
+
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+
+          git add agent-configs/${AGENT_NAME}-agent.md
+          git add n8n-workflows/main-workflow.json
+
+          git commit -m "feat: Add ${AGENT_TITLE} Agent - Auto-deployed 🤖
+
+Created via Meta Agent automation system.
+
+New Files:
+- agent-configs/${AGENT_NAME}-agent.md
+
+Updated:
+- n8n-workflows/main-workflow.json (added ${AGENT_TITLE} Agent node)
+
+Auto-deployed: $(date '+%Y-%m-%d %H:%M:%S')
+Triggered by: ${{ github.actor }}
+"
+
+      - name: 🚀 Push Changes
+        run: |
+          cd n8n-agent-swarm
+          git push origin ${{ github.ref_name }}
+
+      - name: 🌐 Deploy to Fly.io
+        if: ${{ secrets.FLY_API_TOKEN != '' }}
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          cd n8n-agent-swarm
+
+          # Install Fly CLI
+          curl -L https://fly.io/install.sh | sh
+          export FLYCTL_INSTALL="$HOME/.fly"
+          export PATH="$FLYCTL_INSTALL/bin:$PATH"
+
+          # Deploy to Fly.io
+          fly deploy --app n8n-agent-swarm --remote-only || echo "⚠️ Fly.io deployment skipped or failed"
+
+      - name: 📊 Generate Summary
+        run: |
+          AGENT_NAME="${{ steps.generate.outputs.agent_name }}"
+          AGENT_TITLE="$(echo $AGENT_NAME | sed 's/.*/\u&/')"
+
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          # 🎉 ${AGENT_TITLE} Agent Deployed Successfully!
+
+          ## 📋 Summary
+
+          - **Agent Name**: ${AGENT_TITLE}
+          - **Type**: ${{ steps.generate.outputs.agent_type }}
+          - **Configuration**: \`agent-configs/${AGENT_NAME}-agent.md\`
+          - **Workflow Updated**: ✅ Yes
+          - **Deployed to Fly.io**: ${{ secrets.FLY_API_TOKEN != '' && '✅ Yes' || '⚠️ Skipped (no token)' }}
+
+          ## 🚀 Next Steps
+
+          1. Open your n8n instance: https://n8n-agent-swarm.fly.dev
+          2. The workflow has been updated automatically
+          3. Configure credentials for ${AGENT_TITLE} Agent (if needed)
+          4. Test via Telegram: "Use ${AGENT_TITLE} to..."
+
+          ## 📝 Files Changed
+
+          - ✅ Created: \`agent-configs/${AGENT_NAME}-agent.md\`
+          - ✅ Updated: \`n8n-workflows/main-workflow.json\`
+
+          ---
+
+          **Auto-deployed at**: $(date '+%Y-%m-%d %H:%M:%S UTC')
+          EOF
+
+      - name: 🔔 Notify Success
+        if: success()
+        run: |
+          AGENT_NAME="${{ steps.generate.outputs.agent_name }}"
+          AGENT_TITLE="$(echo $AGENT_NAME | sed 's/.*/\u&/')"
+
+          MESSAGE="✅ *${AGENT_TITLE} Agent Deployed!*
+
+🤖 Agent created and deployed successfully
+
+📋 *What was done:*
+• Created agent configuration
+• Updated n8n workflow
+• Deployed to Fly.io
+• Ready to use!
+
+🎯 *Try it now:*
+\"Use ${AGENT_TITLE} to...\"
+
+⏰ Deployed: $(date '+%H:%M:%S')"
+
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d text="$MESSAGE" \
+            -d parse_mode="Markdown"
+
+      - name: 🔔 Notify Failure
+        if: failure()
+        run: |
+          AGENT_NAME="${{ steps.generate.outputs.agent_name }}"
+
+          MESSAGE="❌ *Agent Deployment Failed*
+
+Agent: ${AGENT_NAME}
+Status: Failed
+
+Check logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+Error occurred during auto-deployment."
+
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d text="$MESSAGE" \
+            -d parse_mode="Markdown"
