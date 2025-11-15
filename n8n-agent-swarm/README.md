@@ -4,6 +4,7 @@
 [![GitHub Actions](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-blue)](https://github.com/features/actions)
 [![n8n](https://img.shields.io/badge/n8n-latest-orange)](https://n8n.io)
 [![Docker](https://img.shields.io/badge/Docker-ready-blue)](https://www.docker.com/)
+[![Deploy to Fly.io](https://img.shields.io/badge/Deploy%20to-Fly.io-blueviolet)](https://fly.io)
 
 A production-ready multi-agent AI automation system powered by n8n, featuring specialized AI agents that work together to handle complex tasks via Telegram.
 
@@ -106,9 +107,85 @@ open http://localhost:5678
    - Send a message to your bot
    - Try: "Send an email to test@example.com saying hello"
 
+## 🚀 Deploy to Fly.io (Production)
+
+Deploy your n8n Agent Swarm to the cloud in 5 minutes with HTTPS, PostgreSQL, and auto-scaling!
+
+### Why Fly.io?
+
+- ✅ **Free Tier Available** - Start with $0/month
+- ✅ **HTTPS Automatic** - SSL certificates included
+- ✅ **Global CDN** - Deploy to Paris (CDG) or 30+ regions
+- ✅ **PostgreSQL Managed** - Database included
+- ✅ **Auto-scaling** - Handles traffic spikes
+- ✅ **One-Command Deploy** - No complex configuration
+
+### Quick Deploy
+
+```bash
+# 1. Install Fly CLI
+curl -L https://fly.io/install.sh | sh  # macOS/Linux
+# or
+iwr https://fly.io/install.ps1 -useb | iex  # Windows
+
+# 2. Login to Fly.io
+fly auth login
+
+# 3. Deploy everything automatically!
+bash scripts/deploy-fly.sh
+```
+
+That's it! Your n8n instance will be live at `https://n8n-agent-swarm.fly.dev` 🎉
+
+### What Gets Deployed
+
+- **n8n** (latest) with all 7 AI agents
+- **PostgreSQL** database (10GB)
+- **Persistent storage** (10GB volume)
+- **HTTPS** with automatic SSL
+- **Health checks** and auto-restart
+- **All your secrets** configured automatically
+
+### After Deployment
+
+1. Open your instance: `https://your-app.fly.dev`
+2. Login with your credentials from `.env`
+3. Import the workflow (already configured!)
+4. Test via Telegram
+
+### Cost Estimate
+
+- **Free Tier**: $0/month (with $5 free credits)
+- **Small Production**: ~$3.50/month
+  - 1 shared CPU (1GB RAM)
+  - PostgreSQL included
+  - 10GB storage
+
+### Useful Commands
+
+```bash
+# View logs
+fly logs
+
+# Scale up
+fly scale memory 2048
+
+# SSH into container
+fly ssh console
+
+# Update deployment
+fly deploy
+
+# Check status
+fly status
+```
+
+**📖 [Full Fly.io Deployment Guide →](DEPLOY-FLYIO.md)**
+
 ## 📖 Documentation
 
 - 📘 [Installation Guide](docs/INSTALLATION.md) - Detailed setup instructions
+- 🚀 [Deploy to Fly.io](DEPLOY-FLYIO.md) - Production deployment guide
 - 🏛️ [Architecture](docs/ARCHITECTURE.md) - System design and data flow
 - 🔧 [Troubleshooting](docs/TROUBLESHOOTING.md) - Common issues and solutions
 - 🔑 [API Keys Setup](docs/API-KEYS.md) - How to obtain all required API keys
