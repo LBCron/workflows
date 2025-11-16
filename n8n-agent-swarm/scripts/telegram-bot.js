@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 
 /**
- * Bot Telegram - AI Agent Swarm
+ * Bot Telegram - AI Agent Swarm COMPLET
  *
- * Bot Telegram simple qui utilise les agents sophistiqués
- * (Research, Content, Code) avec intelligent router, cache, et budget guardian.
+ * Bot Telegram avec 5 agents sophistiqués:
+ * - Research, Content, Code, Email, Calendar
+ * Intelligent router, cache, et budget guardian.
  */
 
 require('dotenv').config();
@@ -12,6 +13,8 @@ const TelegramBot = require('node-telegram-bot-api');
 const ResearchAgent = require('./agents/research-agent-pro');
 const ContentCreator = require('./agents/content-creator-pro');
 const CodeAssistant = require('./agents/code-assistant-pro');
+const EmailAgent = require('./agents/email-agent-pro');
+const CalendarAgent = require('./agents/calendar-agent-pro');
 const BudgetGuardian = require('./monitoring/budget-guardian');
 
 // Validation
@@ -27,17 +30,19 @@ const budgetGuardian = new BudgetGuardian();
 console.log(`
 ╔═══════════════════════════════════════════════════════════════╗
 ║                                                               ║
-║  🤖 Bot Telegram - AI Agent Swarm                            ║
+║  🤖 Bot Telegram - AI Agent Swarm COMPLET                    ║
 ║                                                               ║
 ║  Status: ✅ DÉMARRÉ                                           ║
 ║  Time: ${new Date().toISOString()}                ║
 ║                                                               ║
-║  Agents disponibles:                                          ║
+║  🎯 5 AGENTS SOPHISTIQUÉS:                                    ║
 ║  🔬 Research Agent Pro                                        ║
 ║  ✍️  Content Creator Pro                                      ║
 ║  💻 Code Assistant Pro                                        ║
+║  📧 Email Agent Pro (Gmail/Outlook)                           ║
+║  📅 Calendar Agent Pro (Google Calendar)                      ║
 ║                                                               ║
-║  Features:                                                    ║
+║  ⚡ Features:                                                  ║
 ║  ✅ Intelligent Router (7 AI models)                          ║
 ║  ✅ Mega Cache (70-80% hit rate)                              ║
 ║  ✅ Budget Guardian (auto-protection)                         ║
@@ -51,22 +56,32 @@ console.log(`
 function detectIntent(text) {
   const lower = text.toLowerCase();
 
-  // Research keywords
-  if (
-    lower.match(/recherch|analyse|étudie|compare|trouve|explique|c'est quoi|qu'est-ce que/i) ||
-    lower.includes('?')
-  ) {
-    return 'research';
+  // Email keywords (priorité haute)
+  if (lower.match(/email|mail|gmail|outlook|envoie (un )?message|mes (mails|emails)|non lu|boîte mail|inbox/i)) {
+    return 'email';
   }
 
-  // Content creation keywords
-  if (lower.match(/écris|crée|génère|rédige|compose|article|post|contenu|texte/i)) {
-    return 'content';
+  // Calendar keywords (priorité haute)
+  if (lower.match(/agenda|calendrier|rendez-vous|meeting|réunion|événement|rappel|aujourd'hui|demain|semaine|créneau|disponibilité/i)) {
+    return 'calendar';
   }
 
   // Code keywords
   if (lower.match(/code|fonction|script|programme|debug|optimise|class|def|function/i)) {
     return 'code';
+  }
+
+  // Content creation keywords
+  if (lower.match(/écris|crée|génère|rédige|compose|article|post|contenu|texte|blog/i)) {
+    return 'content';
+  }
+
+  // Research keywords (fallback pour questions)
+  if (
+    lower.match(/recherch|analyse|étudie|compare|trouve|explique|c'est quoi|qu'est-ce que/i) ||
+    lower.includes('?')
+  ) {
+    return 'research';
   }
 
   // Default to research for questions
@@ -121,18 +136,22 @@ bot.onText(/\/start/, async (msg) => {
   await bot.sendMessage(
     chatId,
     `👋 Salut ${userName}!\n\n` +
-      `Je suis ton assistant AI avec 3 agents sophistiqués:\n\n` +
+      `Je suis ton assistant AI ultra-complet avec **5 agents sophistiqués**:\n\n` +
       `🔬 **Research Agent** - Recherche et analyse\n` +
       `✍️  **Content Creator** - Création de contenu\n` +
-      `💻 **Code Assistant** - Aide au code\n\n` +
+      `💻 **Code Assistant** - Aide au code\n` +
+      `📧 **Email Agent** - Gestion emails (Gmail/Outlook)\n` +
+      `📅 **Calendar Agent** - Gestion agenda (Google Calendar)\n\n` +
       `**Exemples:**\n` +
       `• "Recherche les tendances IA 2024"\n` +
       `• "Écris un article sur le web3"\n` +
-      `• "Code une fonction fibonacci en Python"\n\n` +
+      `• "Code une fonction fibonacci en Python"\n` +
+      `• "Résume mes emails non lus"\n` +
+      `• "Quel est mon agenda aujourd'hui ?"\n\n` +
       `**Commandes:**\n` +
       `/stats - Statistiques\n` +
       `/budget - Budget status\n` +
-      `/help - Aide`,
+      `/help - Aide complète`,
     { parse_mode: 'Markdown' }
   );
 });
@@ -155,6 +174,12 @@ bot.onText(/\/help/, async (msg) => {
       `**💻 Code Assistant:**\n` +
       `Mentionne "code" ou "fonction"\n` +
       `_Exemple: "Code une fonction de tri en JS"_\n\n` +
+      `**📧 Email Agent:**\n` +
+      `"Résume mes emails", "Mes emails non lus"\n` +
+      `_Exemple: "Combien d'emails non lus ?"_\n\n` +
+      `**📅 Calendar Agent:**\n` +
+      `"Mon agenda", "Crée un meeting..."\n` +
+      `_Exemple: "Quel est mon agenda aujourd'hui ?"_\n\n` +
       `**Commandes:**\n` +
       `/start - Démarrage\n` +
       `/stats - Statistiques système\n` +
@@ -246,6 +271,77 @@ bot.on('message', async (msg) => {
     let result;
 
     switch (intent) {
+      case 'email':
+        {
+          // Détecter action email spécifique
+          if (text.match(/résume|non lu|combien/i)) {
+            result = await EmailAgent.summarizeUnread('gmail');
+
+            if (result.cost > 0) {
+              budgetGuardian.trackCost(result.cost, 'email-summarize');
+            }
+
+            await bot.sendMessage(chatId, result.summary, { parse_mode: 'Markdown' });
+          } else {
+            await bot.sendMessage(
+              chatId,
+              '📧 **Email Agent**\n\nActions disponibles:\n' +
+              '• "Résume mes emails"\n' +
+              '• "Combien d\'emails non lus ?"\n' +
+              '• "Mes emails non lus"\n\n' +
+              '_Plus de fonctionnalités bientôt!_',
+              { parse_mode: 'Markdown' }
+            );
+          }
+        }
+        break;
+
+      case 'calendar':
+        {
+          // Détecter action calendar spécifique
+          if (text.match(/aujourd'hui|agenda du jour/i)) {
+            result = await CalendarAgent.todayAgenda();
+            await bot.sendMessage(chatId, result.summary, { parse_mode: 'Markdown' });
+          } else if (text.match(/semaine|cette semaine/i)) {
+            result = await CalendarAgent.weekAgenda();
+            await bot.sendMessage(chatId, result.summary, { parse_mode: 'Markdown' });
+          } else if (text.match(/crée|créer|ajoute|meeting|rendez-vous/i)) {
+            result = await CalendarAgent.smartSchedule(text);
+
+            if (result.cost > 0) {
+              budgetGuardian.trackCost(result.cost, 'calendar-smart-schedule');
+            }
+
+            if (result.success) {
+              await bot.sendMessage(
+                chatId,
+                `✅ **Événement créé !**\n\n` +
+                `📅 ${result.event.summary}\n` +
+                `🕐 ${new Date(result.event.start).toLocaleString('fr-FR')}\n` +
+                `🔗 ${result.event.link}`,
+                { parse_mode: 'Markdown' }
+              );
+            } else {
+              await bot.sendMessage(
+                chatId,
+                `❌ ${result.error}\n\n💡 ${result.suggestion}`,
+                { parse_mode: 'Markdown' }
+              );
+            }
+          } else {
+            await bot.sendMessage(
+              chatId,
+              '📅 **Calendar Agent**\n\nActions disponibles:\n' +
+              '• "Mon agenda aujourd\'hui"\n' +
+              '• "Mon agenda de la semaine"\n' +
+              '• "Crée un meeting demain à 14h"\n\n' +
+              '_Plus de fonctionnalités bientôt!_',
+              { parse_mode: 'Markdown' }
+            );
+          }
+        }
+        break;
+
       case 'research':
         {
           const agent = new ResearchAgent();
