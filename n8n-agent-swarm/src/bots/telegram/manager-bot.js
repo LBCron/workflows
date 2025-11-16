@@ -28,10 +28,13 @@ const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
 
-// Scrapers
-const XianyuScraper = require('../../scrapers/xianyu/xianyu-scraper');
+// Scrapers (stubs)
 const WeChatScraper = require('../../scrapers/wechat/wechat-scraper');
 const WeigouScraper = require('../../scrapers/weigou/weigou-scraper');
+
+// Integrations (auto-scrapers)
+const XianyuAutoScraper = require('../../integrations/xianyu-scraper');
+const VintedAPI = require('../../integrations/vinted-api');
 
 // Constants (BUG #23 fix: Magic numbers)
 const MAX_MESSAGE_LENGTH = 4096;
@@ -76,12 +79,18 @@ class ManagerBot {
       apiKey: this.openaiKey
     });
 
-    // Scrapers
+    // Scrapers (stubs for compatibility)
     this.scrapers = {
-      xianyu: new XianyuScraper(),
       wechat: new WeChatScraper(),
       weigou: new WeigouScraper()
     };
+
+    // Auto-scrapers (production-ready)
+    this.xianyuScraper = new XianyuAutoScraper();
+    this.vintedAPI = new VintedAPI();
+
+    // Xianyu active scans tracking
+    this.activeXianyuScans = new Map();
 
     // State management (BUG #6, #12 fix)
     this.isScanning = false;
@@ -518,6 +527,7 @@ Assistant commerce Chine-France optimisé.
 
     this.setupMemoryCommands();
     this.setupAdminCommands();
+    this.setupXianyuCommands();
   }
 
   setupMemoryCommands() {
@@ -615,6 +625,402 @@ Assistant commerce Chine-France optimisé.
 🔄 Caches:
 - Intents: ${this.intentCache.size}/${this.INTENT_CACHE_MAX}`);
     });
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // XIANYU AUTO-SCRAPER COMMANDS
+  // ═══════════════════════════════════════════════════════════
+
+  setupXianyuCommands() {
+    // /xianyu_status - Check Xianyu scraper status
+    this.bot.onText(/\/xianyu_status/, async (msg) => {
+      if (!this.isAdmin(msg)) return;
+
+      try {
+        await this.safeSendMessage(msg.chat.id, '🔍 Vérification statut Xianyu...');
+
+        const status = await this.xianyuScraper.getStatus();
+
+        const statusMsg = `
+🤖 Xianyu Auto-Scraper Status
+
+🔐 Authentification: ${status.authenticated ? '✅ Connecté' : '❌ Non connecté'}
+📦 Dépendances:
+- Playwright: ${status.dependencies.playwright ? '✅' : '❌'}
+- FastAPI: ${status.dependencies.fastapi ? '✅' : '❌'}
+- OpenAI: ${status.dependencies.openai ? '✅' : '❌'}
+
+📁 Scraper path: ${status.scraperPath}
+🐍 Python: ${status.pythonPath}
+
+${status.ready ? '✅ Prêt à scanner !' : '⚠️ Configuration requise'}
+
+${!status.authenticated ? '\n💡 Utilise /xianyu_login pour te connecter' : ''}
+${!status.dependencies.allInstalled ? '\n⚠️ Installe dépendances Python (voir docs)' : ''}
+        `.trim();
+
+        await this.safeSendMessage(msg.chat.id, statusMsg);
+
+      } catch (error) {
+        logger.error('Error /xianyu_status:', error);
+        await this.safeSendMessage(msg.chat.id, `❌ Erreur: ${error.message}`);
+      }
+    });
+
+    // /xianyu_login - QR code login
+    this.bot.onText(/\/xianyu_login/, async (msg) => {
+      if (!this.isAdmin(msg)) return;
+
+      try {
+        await this.safeSendMessage(msg.chat.id, '🔐 Génération QR code Xianyu...\n\n⏱️ Expire dans 2 minutes');
+
+        // Listen for QR ready event
+        this.xianyuScraper.once('qr-ready', async (qrPath) => {
+          try {
+            await this.bot.sendPhoto(msg.chat.id, qrPath, {
+              caption: '📱 Scanne ce QR code avec l\'app Xianyu\n⏱️ 2 minutes max'
+            });
+
+            await this.safeSendMessage(msg.chat.id, '⏳ En attente du scan...');
+
+          } catch (error) {
+            logger.error('QR send error:', error);
+          }
+        });
+
+        // Listen for login success
+        this.xianyuScraper.once('login-success', async () => {
+          await this.safeSendMessage(msg.chat.id, '✅ Login réussi ! Tu peux maintenant scanner.\n\nUtilise: /xianyu_scan VENDOR_ID');
+        });
+
+        // Start login process
+        const result = await this.xianyuScraper.login();
+
+        if (result.success) {
+          logger.info('✅ Xianyu login successful');
+        }
+
+      } catch (error) {
+        logger.error('Error /xianyu_login:', error);
+        await this.safeSendMessage(msg.chat.id, `❌ Erreur login: ${error.message}\n\nVérifie que Python et Playwright sont installés.`);
+      }
+    });
+
+    // /xianyu_scan [vendorId] [maxPages] - Scan vendor
+    this.bot.onText(/\/xianyu_scan(?:\s+([^\s]+))?(?:\s+(\d+))?/, async (msg, match) => {
+      if (!this.isAdmin(msg)) return;
+
+      const vendorId = match[1];
+      const maxPages = parseInt(match[2] || '50', 10);
+
+      if (!vendorId) {
+        return await this.safeSendMessage(msg.chat.id,
+          '❌ Utilisation: /xianyu_scan VENDOR_ID [MAX_PAGES]\n\nExemple: /xianyu_scan ABC123 50'
+        );
+      }
+
+      try {
+        // Check if logged in
+        const loggedIn = await this.xianyuScraper.isLoggedIn();
+        if (!loggedIn) {
+          return await this.safeSendMessage(msg.chat.id,
+            '❌ Non connecté à Xianyu\n\nUtilise d\'abord: /xianyu_login'
+          );
+        }
+
+        // Check if scan already running for this vendor
+        if (this.activeXianyuScans.has(vendorId)) {
+          return await this.safeSendMessage(msg.chat.id,
+            '⚠️ Scan déjà en cours pour ce vendeur\n\nUtilise /xianyu_cancel pour annuler'
+          );
+        }
+
+        this.activeXianyuScans.set(vendorId, { chatId: msg.chat.id, startTime: Date.now() });
+
+        await this.safeSendMessage(msg.chat.id,
+`🚀 Démarrage scan Xianyu...
+
+📱 Vendeur: ${vendorId}
+📄 Pages max: ${maxPages}
+⏱️ Durée estimée: ${Math.ceil(maxPages * 0.2)}-${Math.ceil(maxPages * 0.3)} minutes
+
+🔄 Je t'enverrai des updates toutes les 50 produits...`
+        );
+
+        let lastProgress = null;
+
+        // Scan vendor
+        const scanResult = await this.xianyuScraper.scanVendor({
+          vendorId,
+          maxPages,
+          onProgress: async (progress) => {
+            // Send progress update
+            if (!lastProgress || progress.count - lastProgress.count >= 50) {
+              lastProgress = progress;
+
+              await this.safeSendMessage(msg.chat.id,
+                `📦 ${progress.count} produits scannés... (Page ${progress.page})`
+              );
+            }
+          }
+        });
+
+        // Scan complete!
+        this.activeXianyuScans.delete(vendorId);
+
+        await this.safeSendMessage(msg.chat.id,
+`✅ SCAN TERMINÉ !
+
+📊 Résultats:
+- Produits trouvés: ${scanResult.productsScanned}
+- Durée: ${(scanResult.duration / 1000 / 60).toFixed(1)} minutes
+
+🔄 Analyse avec Vinted et calcul profit...`
+        );
+
+        // Now analyze with Vinted and calculate profit
+        await this.analyzeXianyuResults(msg.chat.id, scanResult.results);
+
+      } catch (error) {
+        this.activeXianyuScans.delete(vendorId);
+        logger.error('Error /xianyu_scan:', error);
+        await this.safeSendMessage(msg.chat.id, `❌ Erreur scan: ${error.message}`);
+      }
+    });
+
+    // /xianyu_cancel - Cancel active scan
+    this.bot.onText(/\/xianyu_cancel/, async (msg) => {
+      if (!this.isAdmin(msg)) return;
+
+      try {
+        const aborted = this.xianyuScraper.abort();
+
+        if (aborted) {
+          this.activeXianyuScans.clear();
+          await this.safeSendMessage(msg.chat.id, '🛑 Scan annulé');
+        } else {
+          await this.safeSendMessage(msg.chat.id, '⚠️ Aucun scan actif');
+        }
+
+      } catch (error) {
+        logger.error('Error /xianyu_cancel:', error);
+        await this.safeSendMessage(msg.chat.id, `❌ Erreur: ${error.message}`);
+      }
+    });
+  }
+
+  /**
+   * Analyze Xianyu results with Vinted comparison and profit calculation
+   */
+  async analyzeXianyuResults(chatId, products) {
+    if (!products || products.length === 0) {
+      return await this.safeSendMessage(chatId, '⚠️ Aucun produit à analyser');
+    }
+
+    await this.safeSendMessage(chatId,
+      `🔍 Analyse de ${products.length} produits avec Vinted...\n⏱️ Ceci peut prendre quelques minutes...`
+    );
+
+    const deals = [];
+    let analyzed = 0;
+
+    // Analyze each product
+    for (const product of products) {
+      try {
+        analyzed++;
+
+        // Progress update every 20 products
+        if (analyzed % 20 === 0) {
+          await this.safeSendMessage(chatId,
+            `📊 Analysé ${analyzed}/${products.length} produits...`
+          );
+        }
+
+        // Clean title for Vinted search
+        const searchQuery = this.vintedAPI.cleanQuery(product.title);
+
+        // Get Vinted price stats
+        const vintedStats = await this.vintedAPI.getPriceStats(searchQuery);
+
+        // Calculate profit
+        const profitCalc = this.vintedAPI.calculateProfit(
+          product.priceEur,
+          vintedStats
+        );
+
+        // Skip if not profitable or no Vinted data
+        if (!vintedStats.found || profitCalc.profit < 20) {
+          continue;
+        }
+
+        // Add to deals
+        deals.push({
+          ...product,
+          vintedStats,
+          profitCalc,
+          overallScore: this.calculateOverallScore(product, vintedStats, profitCalc)
+        });
+
+        // Save to memory
+        if (typeof this.memory.addProduct === 'function') {
+          this.memory.addProduct({
+            product_id: product.id,
+            title: product.title,
+            price_cny: product.priceCny,
+            price_eur: product.priceEur,
+            platform: 'xianyu',
+            vendor_id: product.sellerId,
+            image_url: product.images[0] || null,
+            url: product.url,
+            deal_score: profitCalc.profitable ? 85 : 50,
+            authenticity_score: product.aiScore || 50,
+            vinted_price_eur: vintedStats.avgPrice,
+            profit_potential: profitCalc.profit,
+            recommended: profitCalc.recommendation === 'BUY'
+          });
+        }
+
+      } catch (error) {
+        logger.error('Product analysis error:', error);
+      }
+    }
+
+    // Sort by profit (highest first)
+    deals.sort((a, b) => b.profitCalc.profit - a.profitCalc.profit);
+
+    // Take top 18 deals
+    const topDeals = deals.slice(0, 18);
+
+    if (topDeals.length === 0) {
+      return await this.safeSendMessage(chatId,
+`📊 ANALYSE TERMINÉE
+
+❌ Aucun deal rentable trouvé
+
+📦 Produits analysés: ${products.length}
+💰 Deals avec prix Vinted: ${deals.length}
+🎯 Deals rentables (>€20): 0
+
+💡 Essaie un autre vendeur ou ajuste tes critères`
+      );
+    }
+
+    // Send summary
+    await this.safeSendMessage(chatId,
+`✅ ANALYSE TERMINÉE
+
+⏱️ Produits analysés: ${analyzed}
+🔍 Prix Vinted trouvés: ${deals.length}
+🔥 Deals rentables: ${topDeals.length}
+
+📤 Envoi des top ${topDeals.length} deals...`
+    );
+
+    // Send each deal
+    for (let i = 0; i < topDeals.length; i++) {
+      const deal = topDeals[i];
+
+      const dealMsg = this.formatXianyuDeal(i + 1, deal);
+
+      await this.safeSendMessage(chatId, dealMsg);
+
+      // Send product image if available
+      if (deal.images && deal.images[0]) {
+        try {
+          await this.bot.sendPhoto(chatId, deal.images[0]);
+        } catch (error) {
+          logger.warn('Failed to send product image:', error.message);
+        }
+      }
+
+      // Small delay between deals
+      await this.sleep(500);
+    }
+
+    // Final summary
+    await this.safeSendMessage(chatId,
+`💾 Tous les deals sauvegardés !
+
+Commandes:
+- /deals - Voir tous les deals
+- /vendors - Gérer vendeurs
+- /xianyu_scan - Scanner un autre vendeur`
+    );
+  }
+
+  /**
+   * Format Xianyu deal for Telegram
+   */
+  formatXianyuDeal(rank, deal) {
+    const {
+      title,
+      priceCny,
+      priceEur,
+      condition,
+      vintedStats,
+      profitCalc,
+      aiAnalysis,
+      aiScore,
+      url
+    } = deal;
+
+    const profitEmoji = profitCalc.profit >= 50 ? '🔥🔥🔥' :
+                        profitCalc.profit >= 30 ? '🔥🔥' : '🔥';
+
+    return `
+${profitEmoji} **DEAL #${rank}**
+
+📦 ${this.truncate(title, 60)}
+
+💰 **Prix Chine**: ¥${priceCny.toFixed(2)} (€${priceEur.toFixed(2)})
+💵 **Vinted moyen**: €${vintedStats.avgPrice.toFixed(2)}
+📈 **PROFIT**: €${profitCalc.profit.toFixed(2)} (${profitCalc.margin.toFixed(1)}%)
+
+🤖 Score IA: ${aiScore}/100
+${condition ? '📊 État: ' + condition : ''}
+📊 ${vintedStats.count} annonces Vinted similaires
+
+${aiAnalysis ? '**Analyse IA:**\n' + this.truncate(aiAnalysis, 200) : ''}
+
+🔗 ${url}
+
+---
+    `.trim();
+  }
+
+  /**
+   * Calculate overall deal score
+   */
+  calculateOverallScore(product, vintedStats, profitCalc) {
+    let score = 0;
+
+    // Profit score (0-40 points)
+    if (profitCalc.profit >= 50) score += 40;
+    else if (profitCalc.profit >= 30) score += 30;
+    else if (profitCalc.profit >= 20) score += 20;
+    else score += 10;
+
+    // AI score (0-30 points)
+    score += Math.min(30, (product.aiScore || 50) / 100 * 30);
+
+    // Vinted listings count (0-20 points)
+    if (vintedStats.count >= 50) score += 20;
+    else if (vintedStats.count >= 20) score += 15;
+    else if (vintedStats.count >= 10) score += 10;
+    else score += 5;
+
+    // Price range spread (0-10 points)
+    const priceSpread = vintedStats.maxPrice - vintedStats.minPrice;
+    if (priceSpread > 100) score += 10;
+    else if (priceSpread > 50) score += 7;
+    else score += 3;
+
+    return Math.min(100, score);
+  }
+
+  truncate(str, maxLen) {
+    if (!str) return '';
+    return str.length > maxLen ? str.substring(0, maxLen - 3) + '...' : str;
   }
 
   // ═══════════════════════════════════════════════════════════
