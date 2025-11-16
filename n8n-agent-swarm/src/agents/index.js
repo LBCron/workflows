@@ -21,7 +21,9 @@ class AgentFactory {
       code: './code/code.agent',
       email: './email/email.agent',
       calendar: './calendar/calendar.agent',
-      meta: './meta/meta.agent'
+      meta: './meta/meta.agent',
+      notification: './notification/notification.agent',
+      notion: './notion/notion.agent'
     };
 
     const modulePath = agentModules[type];
