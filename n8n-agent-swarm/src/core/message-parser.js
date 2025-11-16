@@ -140,23 +140,96 @@ class MessageParser {
       };
     }
 
-    // EMAIL - Détection (futur Email Agent)
+    // TRANSLATION - Détection
+    const translationKeywords = ['traduis', 'translate', 'traduction'];
+    if (translationKeywords.some(k => t.includes(k))) {
+      // Extraire langue cible
+      let targetLang = 'en';
+      const langMap = {
+        'anglais': 'en', 'english': 'en',
+        'français': 'fr', 'french': 'fr',
+        'espagnol': 'es', 'spanish': 'es',
+        'allemand': 'de', 'german': 'de',
+        'italien': 'it', 'italian': 'it',
+        'portugais': 'pt', 'portuguese': 'pt',
+        'chinois': 'zh', 'chinese': 'zh',
+        'japonais': 'ja', 'japanese': 'ja',
+        'arabe': 'ar', 'arabic': 'ar'
+      };
+
+      for (const [langName, langCode] of Object.entries(langMap)) {
+        if (t.includes(langName)) {
+          targetLang = langCode;
+          break;
+        }
+      }
+
+      // Extraire le texte à traduire (après ":" ou ":")
+      let textToTranslate = text;
+      const colonIndex = text.indexOf(':');
+      if (colonIndex > -1) {
+        textToTranslate = text.substring(colonIndex + 1).trim();
+      }
+
+      return {
+        type: 'translation',
+        targetLang,
+        text: textToTranslate
+      };
+    }
+
+    // IMAGE - Détection
+    const imageKeywords = ['image', 'photo', 'picture', 'génère une image', 'crée une image', 'dessine'];
+    if (imageKeywords.some(k => t.includes(k))) {
+      // Extraire le prompt (tout le texte après les keywords)
+      let prompt = text;
+      for (const keyword of imageKeywords) {
+        if (t.includes(keyword)) {
+          const index = t.indexOf(keyword) + keyword.length;
+          prompt = text.substring(text.toLowerCase().indexOf(keyword) + keyword.length).trim();
+          break;
+        }
+      }
+
+      return {
+        type: 'image',
+        prompt: prompt || text
+      };
+    }
+
+    // EMAIL - Détection
     if (t.includes('email') || t.includes('mail') ||
         t.includes('gmail') || t.includes('outlook')) {
+
+      let action = 'read';
+      if (t.includes('envoie') || t.includes('send')) {
+        action = 'send';
+      } else if (t.includes('lis') || t.includes('read') || t.includes('check')) {
+        action = 'read';
+      }
+
       return {
         type: 'email',
-        action: 'compose', // ou 'read', 'send', 'summarize'
+        action,
         description: text
       };
     }
 
-    // CALENDAR - Détection (futur Calendar Agent)
+    // CALENDAR - Détection
     if (t.includes('agenda') || t.includes('calendrier') ||
         t.includes('rendez-vous') || t.includes('réunion') ||
         t.includes('événement')) {
+
+      let action = 'list';
+      if (t.includes('crée') || t.includes('ajoute') || t.includes('schedule')) {
+        action = 'create';
+      } else if (t.includes('liste') || t.includes('montre') || t.includes('affiche')) {
+        action = 'list';
+      }
+
       return {
         type: 'calendar',
-        action: 'schedule', // ou 'list', 'check'
+        action,
         description: text
       };
     }

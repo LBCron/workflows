@@ -1,533 +1,496 @@
-#!/usr/bin/env node
-
 /**
- * Calendar Agent PRO
+ * 📅 CALENDAR AGENT PRO v4.0
  *
- * Agent de gestion d'agenda intelligent avec Google Calendar
+ * Gestion complète du calendrier via Google Calendar
+ *
+ * Fonctionnalités:
+ * - ✅ Création d'événements
+ * - ✅ Liste et recherche d'événements
+ * - ✅ Modification et suppression
+ * - ✅ Gestion des rappels
+ * - ✅ Détection de conflits
+ * - ✅ Suggestions de créneaux libres
+ * - ✅ Invitations et participants
+ * - ✅ Récurrence (événements répétitifs)
  */
 
-const router = require('../ai-core/intelligent-router-pro');
+const { google } = require('googleapis');
+const logger = require('../../core/logger/logger');
 
 class CalendarAgentPro {
-  constructor() {
+  constructor(config = {}) {
+    this.config = config;
     this.calendar = null;
+    this.initialized = false;
 
-    this.actions = {
-      list: {
-        name: 'LISTER',
-        description: 'Voir événements à venir',
-        priority: 'low',
-        expectedCost: 0
-      },
-      create: {
-        name: 'CRÉER',
-        description: 'Créer nouvel événement',
-        priority: 'normal',
-        expectedCost: 0.001
-      },
-      smart_create: {
-        name: 'CRÉATION_INTELLIGENTE',
-        description: 'Parser description et créer événement',
-        priority: 'normal',
-        expectedCost: 0.003
-      },
-      summarize: {
-        name: 'RÉSUMÉ',
-        description: 'Résumer agenda du jour/semaine',
-        priority: 'normal',
-        expectedCost: 0.002
-      }
-    };
+    logger.info('📅 Calendar Agent Pro initialisé');
   }
 
-  // ===== GOOGLE CALENDAR INTEGRATION =====
-
-  async connect() {
-    if (this.calendar) return this.calendar;
-
+  /**
+   * Initialise la connexion Google Calendar
+   */
+  async initialize() {
     try {
-      const { google } = require('googleapis');
-
-      const auth = new google.auth.OAuth2(
+      const oauth2Client = new google.auth.OAuth2(
         process.env.GOOGLE_CLIENT_ID,
         process.env.GOOGLE_CLIENT_SECRET,
-        process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/oauth2callback'
+        process.env.GOOGLE_REDIRECT_URI
       );
 
-      if (process.env.GOOGLE_REFRESH_TOKEN) {
-        auth.setCredentials({
-          refresh_token: process.env.GOOGLE_REFRESH_TOKEN
-        });
-      }
+      oauth2Client.setCredentials({
+        refresh_token: process.env.GOOGLE_REFRESH_TOKEN
+      });
 
-      this.calendar = google.calendar({ version: 'v3', auth });
-      return this.calendar;
+      this.calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+      this.initialized = true;
 
+      logger.info('✅ Calendar Agent connecté');
+
+      return { success: true };
     } catch (error) {
-      throw new Error(`Calendar connection failed: ${error.message}\nInstall: npm install googleapis`);
+      logger.error('❌ Erreur initialisation calendar', { error: error.message });
+      throw error;
     }
   }
 
-  // ===== BASIC OPERATIONS =====
-
-  async listEvents(timeMin = new Date(), timeMax = null, maxResults = 10) {
-    const calendar = await this.connect();
-
-    const params = {
-      calendarId: 'primary',
-      timeMin: timeMin.toISOString(),
-      maxResults,
-      singleEvents: true,
-      orderBy: 'startTime'
-    };
-
-    if (timeMax) {
-      params.timeMax = timeMax.toISOString();
-    }
-
-    const res = await calendar.events.list(params);
-
-    return res.data.items.map(event => ({
-      id: event.id,
-      summary: event.summary || '(Sans titre)',
-      description: event.description || '',
-      start: event.start.dateTime || event.start.date,
-      end: event.end.dateTime || event.end.date,
-      location: event.location || '',
-      attendees: event.attendees || [],
-      htmlLink: event.htmlLink,
-      isAllDay: !event.start.dateTime
-    }));
-  }
-
-  async createEvent(summary, start, end, description = '', location = '') {
-    const calendar = await this.connect();
-
-    const event = {
-      summary,
-      description,
-      location,
-      start: {
-        dateTime: start.toISOString(),
-        timeZone: process.env.TIMEZONE || 'Europe/Paris'
-      },
-      end: {
-        dateTime: end.toISOString(),
-        timeZone: process.env.TIMEZONE || 'Europe/Paris'
-      }
-    };
-
-    const res = await calendar.events.insert({
-      calendarId: 'primary',
-      resource: event
-    });
-
-    return {
-      success: true,
-      eventId: res.data.id,
-      summary: res.data.summary,
-      start: res.data.start.dateTime,
-      link: res.data.htmlLink
-    };
-  }
-
-  async updateEvent(eventId, updates) {
-    const calendar = await this.connect();
-
-    const res = await calendar.events.patch({
-      calendarId: 'primary',
-      eventId,
-      resource: updates
-    });
-
-    return {
-      success: true,
-      eventId: res.data.id,
-      summary: res.data.summary,
-      link: res.data.htmlLink
-    };
-  }
-
-  async deleteEvent(eventId) {
-    const calendar = await this.connect();
-
-    await calendar.events.delete({
-      calendarId: 'primary',
-      eventId
-    });
-
-    return {
-      success: true,
-      eventId,
-      message: 'Événement supprimé'
-    };
-  }
-
-  // ===== AI-POWERED FEATURES =====
-
-  async todayAgenda() {
-    console.log('📅 Getting today\'s agenda...');
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    const events = await this.listEvents(today, tomorrow, 50);
-
-    if (events.length === 0) {
-      return {
-        summary: "📅 Aucun événement aujourd'hui ! Journée libre 🎉",
-        count: 0,
-        events: []
-      };
-    }
-
-    // Trier par heure
-    events.sort((a, b) => new Date(a.start) - new Date(b.start));
-
-    // Formater pour l'utilisateur
-    const formatted = events.map(e => {
-      const startTime = new Date(e.start);
-      const endTime = new Date(e.end);
-
-      if (e.isAllDay) {
-        return `📌 Toute la journée: ${e.summary}`;
-      }
-
-      const timeStr = startTime.toLocaleTimeString('fr-FR', {
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-      const endTimeStr = endTime.toLocaleTimeString('fr-FR', {
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-
-      let line = `⏰ ${timeStr}-${endTimeStr}: ${e.summary}`;
-      if (e.location) line += ` 📍 ${e.location}`;
-
-      return line;
-    }).join('\n');
-
-    return {
-      summary: `📅 **Agenda du ${today.toLocaleDateString('fr-FR')}** (${events.length} événement${events.length > 1 ? 's' : ''})\n\n${formatted}`,
-      count: events.length,
-      events: events.slice(0, 10)
-    };
-  }
-
-  async weekAgenda() {
-    console.log('📅 Getting week agenda...');
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const nextWeek = new Date(today);
-    nextWeek.setDate(nextWeek.getDate() + 7);
-
-    const events = await this.listEvents(today, nextWeek, 100);
-
-    if (events.length === 0) {
-      return {
-        summary: "📅 Aucun événement cette semaine !",
-        count: 0,
-        events: []
-      };
-    }
-
-    // Grouper par jour
-    const byDay = {};
-    for (const event of events) {
-      const day = new Date(event.start).toLocaleDateString('fr-FR', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long'
-      });
-
-      if (!byDay[day]) byDay[day] = [];
-      byDay[day].push(event);
-    }
-
-    // Formater
-    let formatted = '';
-    for (const [day, dayEvents] of Object.entries(byDay)) {
-      formatted += `\n**${day}** (${dayEvents.length})\n`;
-      dayEvents.slice(0, 5).forEach(e => {
-        const time = new Date(e.start).toLocaleTimeString('fr-FR', {
-          hour: '2-digit',
-          minute: '2-digit'
-        });
-        formatted += `  ⏰ ${time} - ${e.summary}\n`;
-      });
-      if (dayEvents.length > 5) {
-        formatted += `  ... et ${dayEvents.length - 5} autre(s)\n`;
-      }
-    }
-
-    return {
-      summary: `📅 **Agenda de la semaine** (${events.length} événements)${formatted}`,
-      count: events.length,
-      events,
-      byDay
-    };
-  }
-
-  async smartSchedule(description) {
-    console.log(`🤖 Smart scheduling: "${description}"...`);
-
-    const prompt = `Tu es un assistant agenda intelligent. Parse cette demande de rendez-vous et extrais les informations suivantes:
-
-DEMANDE: "${description}"
-
-INSTRUCTIONS:
-- Détermine le titre de l'événement
-- Détermine la date et l'heure (utilise la date du jour si non spécifié: ${new Date().toLocaleDateString('fr-FR')})
-- Détermine la durée (défaut: 1 heure)
-- Détermine le lieu si mentionné
-- Détermine la description si applicable
-
-IMPORTANT: Retourne UNIQUEMENT un objet JSON valide avec cette structure:
-{
-  "title": "Titre de l'événement",
-  "date": "YYYY-MM-DD",
-  "time": "HH:MM",
-  "duration": 60,
-  "location": "Lieu (optionnel)",
-  "description": "Description (optionnel)"
-}
-
-Ne retourne RIEN d'autre que le JSON. Pas de markdown, pas d'explication.`;
-
-    const result = await router.route(prompt, {
-      type: 'analysis',
-      priority: 'normal',
-      maxTokens: 500
-    });
-
+  /**
+   * 📝 CRÉER UN ÉVÉNEMENT
+   *
+   * @param {Object} eventData - Données de l'événement
+   * @returns {Object} Événement créé
+   */
+  async createEvent(eventData) {
     try {
-      // Extract JSON from response
-      let jsonStr = result.content.trim();
-
-      // Remove markdown code blocks if present
-      jsonStr = jsonStr.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-
-      const parsed = JSON.parse(jsonStr);
-
-      // Valider les données
-      if (!parsed.title || !parsed.date || !parsed.time) {
-        throw new Error('Missing required fields: title, date, or time');
+      if (!this.initialized) {
+        await this.initialize();
       }
 
-      // Créer les dates
-      const [year, month, day] = parsed.date.split('-').map(Number);
-      const [hour, minute] = parsed.time.split(':').map(Number);
+      const {
+        summary,
+        description,
+        location,
+        startTime,
+        endTime,
+        attendees = [],
+        reminders = [],
+        recurrence,
+        colorId
+      } = eventData;
 
-      const start = new Date(year, month - 1, day, hour, minute);
-      const end = new Date(start.getTime() + (parsed.duration || 60) * 60000);
+      const event = {
+        summary,
+        description,
+        location,
+        start: {
+          dateTime: startTime,
+          timeZone: 'Europe/Paris'
+        },
+        end: {
+          dateTime: endTime,
+          timeZone: 'Europe/Paris'
+        },
+        attendees: attendees.map(email => ({ email })),
+        reminders: {
+          useDefault: reminders.length === 0,
+          overrides: reminders.map(minutes => ({
+            method: 'popup',
+            minutes
+          }))
+        },
+        colorId
+      };
 
-      // Créer l'événement
-      const event = await this.createEvent(
-        parsed.title,
-        start,
-        end,
-        parsed.description || '',
-        parsed.location || ''
-      );
+      if (recurrence) {
+        event.recurrence = [recurrence];
+      }
+
+      const result = await this.calendar.events.insert({
+        calendarId: 'primary',
+        resource: event,
+        sendUpdates: attendees.length > 0 ? 'all' : 'none'
+      });
+
+      logger.info('✅ Événement créé', {
+        id: result.data.id,
+        summary,
+        start: startTime
+      });
 
       return {
         success: true,
-        event,
-        parsed,
-        cost: result.cost
+        event: result.data,
+        id: result.data.id,
+        link: result.data.htmlLink
       };
-
     } catch (error) {
-      console.error('Error parsing AI response:', error.message);
-      console.error('AI Response:', result.content);
-
-      return {
-        success: false,
-        error: `Impossible de parser la demande: ${error.message}`,
-        aiResponse: result.content,
-        suggestion: 'Essayez de reformuler avec plus de détails (date, heure, titre)'
-      };
+      logger.error('❌ Erreur création événement', { error: error.message });
+      throw error;
     }
   }
 
-  async findFreeSlots(date = new Date(), durationMinutes = 60, workHoursOnly = true) {
-    console.log(`🔍 Finding free slots for ${date.toLocaleDateString('fr-FR')}...`);
-
-    // Début et fin de la journée
-    const dayStart = new Date(date);
-    dayStart.setHours(workHoursOnly ? 9 : 0, 0, 0, 0);
-
-    const dayEnd = new Date(date);
-    dayEnd.setHours(workHoursOnly ? 18 : 23, 0, 0, 0);
-
-    // Récupérer les événements du jour
-    const events = await this.listEvents(dayStart, dayEnd, 50);
-
-    // Trier par heure de début
-    events.sort((a, b) => new Date(a.start) - new Date(b.start));
-
-    // Trouver les créneaux libres
-    const freeSlots = [];
-    let currentTime = dayStart;
-
-    for (const event of events) {
-      const eventStart = new Date(event.start);
-      const eventEnd = new Date(event.end);
-
-      // S'il y a un créneau libre avant cet événement
-      if (eventStart - currentTime >= durationMinutes * 60000) {
-        freeSlots.push({
-          start: new Date(currentTime),
-          end: new Date(eventStart),
-          duration: Math.floor((eventStart - currentTime) / 60000)
-        });
+  /**
+   * 📋 LISTER LES ÉVÉNEMENTS
+   *
+   * @param {Object} filters - Filtres de recherche
+   * @returns {Array} Liste d'événements
+   */
+  async listEvents(filters = {}) {
+    try {
+      if (!this.initialized) {
+        await this.initialize();
       }
 
-      // Avancer après cet événement
-      if (eventEnd > currentTime) {
-        currentTime = eventEnd;
-      }
+      const {
+        timeMin = new Date().toISOString(),
+        timeMax,
+        maxResults = 10,
+        q
+      } = filters;
+
+      const response = await this.calendar.events.list({
+        calendarId: 'primary',
+        timeMin,
+        timeMax,
+        maxResults,
+        singleEvents: true,
+        orderBy: 'startTime',
+        q
+      });
+
+      const events = response.data.items || [];
+
+      logger.info('📋 Événements récupérés', { count: events.length });
+
+      return events.map(e => ({
+        id: e.id,
+        summary: e.summary,
+        description: e.description,
+        location: e.location,
+        start: e.start.dateTime || e.start.date,
+        end: e.end.dateTime || e.end.date,
+        attendees: e.attendees?.map(a => a.email) || [],
+        link: e.htmlLink,
+        status: e.status
+      }));
+    } catch (error) {
+      logger.error('❌ Erreur liste événements', { error: error.message });
+      throw error;
     }
-
-    // Créneau libre jusqu'à la fin de journée
-    if (dayEnd - currentTime >= durationMinutes * 60000) {
-      freeSlots.push({
-        start: new Date(currentTime),
-        end: new Date(dayEnd),
-        duration: Math.floor((dayEnd - currentTime) / 60000)
-      });
-    }
-
-    // Formater
-    const formatted = freeSlots.map(slot => {
-      const startTime = slot.start.toLocaleTimeString('fr-FR', {
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-      const endTime = slot.end.toLocaleTimeString('fr-FR', {
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-      return `⚪ ${startTime}-${endTime} (${slot.duration} min)`;
-    }).join('\n');
-
-    return {
-      date: date.toLocaleDateString('fr-FR'),
-      freeSlots,
-      count: freeSlots.length,
-      summary: freeSlots.length > 0
-        ? `🕐 **Créneaux libres le ${date.toLocaleDateString('fr-FR')}**\n\n${formatted}`
-        : `❌ Aucun créneau libre de ${durationMinutes} min`
-    };
   }
 
-  async summarizeWeek() {
-    console.log('📊 Summarizing week with AI...');
+  /**
+   * 🔍 RECHERCHER DES ÉVÉNEMENTS
+   *
+   * @param {Object} criteria - Critères de recherche
+   * @returns {Array} Événements correspondants
+   */
+  async searchEvents(criteria) {
+    const { keyword, dateFrom, dateTo, location, attendee } = criteria;
 
-    const weekData = await this.weekAgenda();
+    let q = keyword || '';
+    if (location) q += ` ${location}`;
+    if (attendee) q += ` ${attendee}`;
 
-    if (weekData.count === 0) {
-      return {
-        summary: "📅 Semaine tranquille, aucun événement prévu !",
-        cost: 0
-      };
-    }
-
-    // Préparer les données pour l'IA
-    const eventsList = weekData.events.map(e => {
-      const date = new Date(e.start).toLocaleDateString('fr-FR', {
-        weekday: 'short',
-        day: 'numeric'
-      });
-      const time = new Date(e.start).toLocaleTimeString('fr-FR', {
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-      return `${date} ${time} - ${e.summary}`;
-    }).join('\n');
-
-    const prompt = `Tu es un assistant agenda. Analyse cette liste d'événements de la semaine et fournis un résumé intelligent en français:
-
-ÉVÉNEMENTS (${weekData.count}):
-${eventsList}
-
-INSTRUCTIONS:
-- Identifie les jours les plus chargés
-- Note les patterns (meetings récurrents, etc.)
-- Suggère des optimisations si applicable
-- Sois concis (max 150 mots)
-
-Fournis un résumé clair et actionnable.`;
-
-    const result = await router.route(prompt, {
-      type: 'analysis',
-      priority: 'normal',
-      maxTokens: 500
+    return await this.listEvents({
+      q: q.trim(),
+      timeMin: dateFrom,
+      timeMax: dateTo,
+      maxResults: 50
     });
-
-    return {
-      summary: `📊 **Résumé de la semaine** (${weekData.count} événements)\n\n${result.content}`,
-      count: weekData.count,
-      cost: result.cost,
-      cached: result.cached
-    };
   }
 
-  // ===== STATUS =====
-
-  async getStatus() {
-    const status = {
-      connected: false,
-      actions: Object.keys(this.actions)
-    };
-
+  /**
+   * ✏️ MODIFIER UN ÉVÉNEMENT
+   *
+   * @param {string} eventId - ID de l'événement
+   * @param {Object} updates - Modifications
+   * @returns {Object} Événement modifié
+   */
+  async updateEvent(eventId, updates) {
     try {
-      await this.connect();
-      // Test connection
-      await this.listEvents(new Date(), null, 1);
-      status.connected = true;
-    } catch (error) {
-      status.error = error.message;
-    }
-
-    return status;
-  }
-}
-
-module.exports = new CalendarAgentPro();
-
-// CLI test
-if (require.main === module) {
-  (async () => {
-    console.log('🧪 Testing Calendar Agent Pro...\n');
-
-    const agent = new CalendarAgentPro();
-
-    try {
-      const status = await agent.getStatus();
-      console.log('Status:', JSON.stringify(status, null, 2));
-
-      if (status.connected) {
-        console.log('\n📅 Testing today\'s agenda...');
-        const today = await agent.todayAgenda();
-        console.log(today.summary);
-
-        console.log('\n🔍 Finding free slots...');
-        const slots = await agent.findFreeSlots();
-        console.log(slots.summary);
+      if (!this.initialized) {
+        await this.initialize();
       }
 
-      console.log('\n✅ Calendar Agent test passed!');
+      // Récupérer l'événement existant
+      const existing = await this.calendar.events.get({
+        calendarId: 'primary',
+        eventId
+      });
+
+      // Appliquer les modifications
+      const event = {
+        ...existing.data,
+        ...updates
+      };
+
+      if (updates.startTime) {
+        event.start = {
+          dateTime: updates.startTime,
+          timeZone: 'Europe/Paris'
+        };
+      }
+
+      if (updates.endTime) {
+        event.end = {
+          dateTime: updates.endTime,
+          timeZone: 'Europe/Paris'
+        };
+      }
+
+      const result = await this.calendar.events.update({
+        calendarId: 'primary',
+        eventId,
+        resource: event,
+        sendUpdates: 'all'
+      });
+
+      logger.info('✅ Événement modifié', { id: eventId });
+
+      return {
+        success: true,
+        event: result.data
+      };
     } catch (error) {
-      console.error('❌ Test failed:', error.message);
-      console.log('\n💡 Configure environment variables:');
-      console.log('   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN');
+      logger.error('❌ Erreur modification événement', { error: error.message });
+      throw error;
     }
-  })();
+  }
+
+  /**
+   * 🗑️ SUPPRIMER UN ÉVÉNEMENT
+   *
+   * @param {string} eventId - ID de l'événement
+   * @returns {Object} Résultat
+   */
+  async deleteEvent(eventId) {
+    try {
+      if (!this.initialized) {
+        await this.initialize();
+      }
+
+      await this.calendar.events.delete({
+        calendarId: 'primary',
+        eventId,
+        sendUpdates: 'all'
+      });
+
+      logger.info('✅ Événement supprimé', { id: eventId });
+
+      return { success: true, deleted: eventId };
+    } catch (error) {
+      logger.error('❌ Erreur suppression événement', { error: error.message });
+      throw error;
+    }
+  }
+
+  /**
+   * ⚠️ DÉTECTER LES CONFLITS
+   *
+   * @param {Object} eventData - Données du nouvel événement
+   * @returns {Object} Résultat avec conflits éventuels
+   */
+  async detectConflicts(eventData) {
+    try {
+      const { startTime, endTime } = eventData;
+
+      // Récupérer les événements dans la plage horaire
+      const events = await this.listEvents({
+        timeMin: startTime,
+        timeMax: endTime
+      });
+
+      const conflicts = events.filter(e => {
+        const eStart = new Date(e.start);
+        const eEnd = new Date(e.end);
+        const newStart = new Date(startTime);
+        const newEnd = new Date(endTime);
+
+        // Vérifier le chevauchement
+        return (newStart < eEnd && newEnd > eStart);
+      });
+
+      logger.info('⚠️ Conflits détectés', { count: conflicts.length });
+
+      return {
+        hasConflicts: conflicts.length > 0,
+        conflicts: conflicts.map(c => ({
+          id: c.id,
+          summary: c.summary,
+          start: c.start,
+          end: c.end
+        }))
+      };
+    } catch (error) {
+      logger.error('❌ Erreur détection conflits', { error: error.message });
+      throw error;
+    }
+  }
+
+  /**
+   * 💡 SUGGÉRER DES CRÉNEAUX LIBRES
+   *
+   * @param {Object} preferences - Préférences de recherche
+   * @returns {Array} Créneaux disponibles
+   */
+  async suggestFreeSlots(preferences) {
+    try {
+      const {
+        duration = 60, // minutes
+        dateFrom = new Date().toISOString(),
+        dateTo,
+        workHoursOnly = true
+      } = preferences;
+
+      // Récupérer tous les événements dans la période
+      const events = await this.listEvents({
+        timeMin: dateFrom,
+        timeMax: dateTo,
+        maxResults: 100
+      });
+
+      // Trouver les créneaux libres
+      const freeSlots = [];
+      let currentTime = new Date(dateFrom);
+      const endTime = new Date(dateTo);
+
+      while (currentTime < endTime) {
+        const slotEnd = new Date(currentTime.getTime() + duration * 60000);
+
+        // Vérifier si le créneau est pendant les heures de travail
+        if (workHoursOnly) {
+          const hour = currentTime.getHours();
+          if (hour < 9 || hour >= 18) {
+            currentTime = new Date(currentTime.getTime() + 30 * 60000);
+            continue;
+          }
+        }
+
+        // Vérifier les conflits
+        const hasConflict = events.some(e => {
+          const eStart = new Date(e.start);
+          const eEnd = new Date(e.end);
+          return (currentTime < eEnd && slotEnd > eStart);
+        });
+
+        if (!hasConflict) {
+          freeSlots.push({
+            start: currentTime.toISOString(),
+            end: slotEnd.toISOString(),
+            duration
+          });
+        }
+
+        // Avancer de 30 minutes
+        currentTime = new Date(currentTime.getTime() + 30 * 60000);
+      }
+
+      logger.info('💡 Créneaux libres trouvés', { count: freeSlots.length });
+
+      return freeSlots.slice(0, 10); // Limiter à 10 suggestions
+    } catch (error) {
+      logger.error('❌ Erreur suggestion créneaux', { error: error.message });
+      throw error;
+    }
+  }
+
+  /**
+   * 📊 OBTENIR UN RÉSUMÉ DU CALENDRIER
+   *
+   * @param {Object} period - Période à analyser
+   * @returns {Object} Résumé
+   */
+  async getSummary(period = {}) {
+    try {
+      const {
+        timeMin = new Date().toISOString(),
+        timeMax = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+      } = period;
+
+      const events = await this.listEvents({ timeMin, timeMax, maxResults: 100 });
+
+      const summary = {
+        total: events.length,
+        upcoming: events.filter(e => new Date(e.start) > new Date()).length,
+        today: events.filter(e => {
+          const start = new Date(e.start);
+          const today = new Date();
+          return start.toDateString() === today.toDateString();
+        }).length,
+        thisWeek: events.length,
+        locations: {},
+        attendees: {}
+      };
+
+      // Analyser les lieux et participants
+      events.forEach(e => {
+        if (e.location) {
+          summary.locations[e.location] = (summary.locations[e.location] || 0) + 1;
+        }
+        e.attendees?.forEach(attendee => {
+          summary.attendees[attendee] = (summary.attendees[attendee] || 0) + 1;
+        });
+      });
+
+      // Top 5 lieux et participants
+      summary.topLocations = Object.entries(summary.locations)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([location, count]) => ({ location, count }));
+
+      summary.topAttendees = Object.entries(summary.attendees)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([email, count]) => ({ email, count }));
+
+      logger.info('📊 Résumé calendrier généré', { total: summary.total });
+
+      return summary;
+    } catch (error) {
+      logger.error('❌ Erreur résumé calendrier', { error: error.message });
+      throw error;
+    }
+  }
+
+  /**
+   * 🔔 CONFIGURER DES RAPPELS
+   *
+   * @param {string} eventId - ID de l'événement
+   * @param {Array} reminders - Rappels (en minutes)
+   * @returns {Object} Résultat
+   */
+  async setReminders(eventId, reminders) {
+    return await this.updateEvent(eventId, {
+      reminders: {
+        useDefault: false,
+        overrides: reminders.map(minutes => ({
+          method: 'popup',
+          minutes
+        }))
+      }
+    });
+  }
+
+  /**
+   * 🔁 CRÉER UN ÉVÉNEMENT RÉCURRENT
+   *
+   * @param {Object} eventData - Données de l'événement
+   * @param {Object} recurrenceRule - Règle de récurrence
+   * @returns {Object} Événement créé
+   */
+  async createRecurringEvent(eventData, recurrenceRule) {
+    const { frequency, interval = 1, count, until } = recurrenceRule;
+
+    let rrule = `RRULE:FREQ=${frequency}`;
+    if (interval > 1) rrule += `;INTERVAL=${interval}`;
+    if (count) rrule += `;COUNT=${count}`;
+    if (until) rrule += `;UNTIL=${until}`;
+
+    return await this.createEvent({
+      ...eventData,
+      recurrence: rrule
+    });
+  }
 }
+
+module.exports = CalendarAgentPro;

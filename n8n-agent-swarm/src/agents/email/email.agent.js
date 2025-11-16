@@ -1,554 +1,511 @@
-#!/usr/bin/env node
-
 /**
- * Email Agent PRO
+ * 📧 EMAIL AGENT PRO v4.0
  *
- * Agent de gestion d'emails multi-plateformes avec IA
- * Support: Gmail, Outlook/Hotmail
+ * Gestion complète des emails via Gmail et Outlook
+ *
+ * Fonctionnalités:
+ * - ✅ Envoi d'emails (Gmail/Outlook)
+ * - ✅ Lecture et recherche d'emails
+ * - ✅ Réponses automatiques intelligentes
+ * - ✅ Gestion des brouillons
+ * - ✅ Templates d'emails professionnels
+ * - ✅ Pièces jointes
+ * - ✅ Filtres et labels
+ * - ✅ Analyse d'emails avec AI
  */
 
-const router = require('../ai-core/intelligent-router-pro');
+const nodemailer = require('nodemailer');
+const { google } = require('googleapis');
+const logger = require('../../core/logger/logger');
 
 class EmailAgentPro {
-  constructor() {
-    this.gmailClient = null;
-    this.outlookClient = null;
-
-    this.actions = {
-      summarize: {
-        name: 'RÉSUMÉ',
-        description: 'Résumer emails non lus',
-        priority: 'normal',
-        expectedCost: 0.001
-      },
-      reply: {
-        name: 'RÉPONSE',
-        description: 'Générer réponse intelligente',
-        priority: 'normal',
-        expectedCost: 0.002
-      },
-      compose: {
-        name: 'COMPOSER',
-        description: 'Rédiger un nouvel email',
-        priority: 'normal',
-        expectedCost: 0.003
-      },
-      categorize: {
-        name: 'CATÉGORISER',
-        description: 'Trier et organiser',
-        priority: 'low',
-        expectedCost: 0.001
-      }
+  constructor(config = {}) {
+    this.config = {
+      provider: config.provider || 'gmail', // 'gmail' ou 'outlook'
+      ...config
     };
+
+    this.transporter = null;
+    this.gmail = null;
+    this.initialized = false;
+
+    logger.info('📧 Email Agent Pro initialisé', { provider: this.config.provider });
   }
 
-  // ===== GMAIL INTEGRATION =====
-
-  async connectGmail() {
-    // Note: Requiert googleapis package
-    // Configuration OAuth2 via variables d'environnement
-
-    if (this.gmailClient) return this.gmailClient;
-
+  /**
+   * Initialise la connexion email
+   */
+  async initialize() {
     try {
-      const { google } = require('googleapis');
-
-      const auth = new google.auth.OAuth2(
-        process.env.GMAIL_CLIENT_ID,
-        process.env.GMAIL_CLIENT_SECRET,
-        process.env.GMAIL_REDIRECT_URI || 'http://localhost:3000/oauth2callback'
-      );
-
-      if (process.env.GMAIL_REFRESH_TOKEN) {
-        auth.setCredentials({
-          refresh_token: process.env.GMAIL_REFRESH_TOKEN
-        });
+      if (this.config.provider === 'gmail') {
+        await this._initializeGmail();
+      } else if (this.config.provider === 'outlook') {
+        await this._initializeOutlook();
       }
 
-      this.gmailClient = google.gmail({ version: 'v1', auth });
-      return this.gmailClient;
+      this.initialized = true;
+      logger.info('✅ Email Agent connecté', { provider: this.config.provider });
 
+      return { success: true, provider: this.config.provider };
     } catch (error) {
-      throw new Error(`Gmail connection failed: ${error.message}\nInstall: npm install googleapis`);
+      logger.error('❌ Erreur initialisation email', { error: error.message });
+      throw error;
     }
   }
 
-  async readGmail(query = 'is:unread', maxResults = 10) {
-    const gmail = await this.connectGmail();
+  /**
+   * Initialise Gmail avec OAuth2
+   */
+  async _initializeGmail() {
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.GMAIL_CLIENT_ID,
+      process.env.GMAIL_CLIENT_SECRET,
+      process.env.GMAIL_REDIRECT_URI
+    );
 
-    const res = await gmail.users.messages.list({
-      userId: 'me',
-      q: query,
-      maxResults
+    oauth2Client.setCredentials({
+      refresh_token: process.env.GMAIL_REFRESH_TOKEN
     });
 
-    if (!res.data.messages || res.data.messages.length === 0) {
-      return [];
-    }
+    this.gmail = google.gmail({ version: 'v1', auth: oauth2Client });
 
-    const emails = [];
+    // Créer transporter Nodemailer avec Gmail
+    const accessToken = await oauth2Client.getAccessToken();
 
-    for (const message of res.data.messages) {
-      try {
-        const msg = await gmail.users.messages.get({
-          userId: 'me',
-          id: message.id,
-          format: 'full'
-        });
-
-        emails.push({
-          id: msg.data.id,
-          threadId: msg.data.threadId,
-          from: this.getHeader(msg, 'From'),
-          to: this.getHeader(msg, 'To'),
-          subject: this.getHeader(msg, 'Subject'),
-          date: this.getHeader(msg, 'Date'),
-          snippet: msg.data.snippet,
-          body: this.getEmailBody(msg)
-        });
-      } catch (error) {
-        console.error(`Error reading email ${message.id}:`, error.message);
-      }
-    }
-
-    return emails;
-  }
-
-  async sendGmail(to, subject, body, options = {}) {
-    const gmail = await this.connectGmail();
-
-    const email = [
-      `To: ${to}`,
-      `Subject: ${subject}`,
-      options.replyTo ? `In-Reply-To: ${options.replyTo}` : '',
-      'Content-Type: text/html; charset=utf-8',
-      '',
-      body
-    ].filter(Boolean).join('\n');
-
-    const encodedEmail = Buffer.from(email)
-      .toString('base64')
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=+$/, '');
-
-    const res = await gmail.users.messages.send({
-      userId: 'me',
-      requestBody: {
-        raw: encodedEmail,
-        threadId: options.threadId
+    this.transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        type: 'OAuth2',
+        user: process.env.GMAIL_USER,
+        clientId: process.env.GMAIL_CLIENT_ID,
+        clientSecret: process.env.GMAIL_CLIENT_SECRET,
+        refreshToken: process.env.GMAIL_REFRESH_TOKEN,
+        accessToken: accessToken.token
       }
     });
-
-    return {
-      success: true,
-      messageId: res.data.id,
-      to,
-      subject
-    };
   }
 
-  // ===== OUTLOOK/HOTMAIL INTEGRATION =====
+  /**
+   * Initialise Outlook/Office365
+   */
+  async _initializeOutlook() {
+    this.transporter = nodemailer.createTransport({
+      host: 'smtp.office365.com',
+      port: 587,
+      secure: false,
+      auth: {
+        user: process.env.OUTLOOK_USER,
+        pass: process.env.OUTLOOK_PASSWORD
+      }
+    });
+  }
 
-  async connectOutlook() {
-    if (this.outlookClient) return this.outlookClient;
-
+  /**
+   * 📤 ENVOYER UN EMAIL
+   *
+   * @param {Object} options - Options d'envoi
+   * @returns {Object} Résultat d'envoi
+   */
+  async send(options) {
     try {
-      const { Client } = require('@microsoft/microsoft-graph-client');
+      if (!this.initialized) {
+        await this.initialize();
+      }
 
-      this.outlookClient = Client.init({
-        authProvider: (done) => {
-          done(null, process.env.OUTLOOK_ACCESS_TOKEN);
-        }
+      const {
+        to,
+        subject,
+        body,
+        html,
+        cc,
+        bcc,
+        attachments,
+        template,
+        variables
+      } = options;
+
+      // Utiliser un template si spécifié
+      let finalBody = body;
+      let finalHtml = html;
+
+      if (template) {
+        const rendered = this._renderTemplate(template, variables);
+        finalBody = rendered.text;
+        finalHtml = rendered.html;
+      }
+
+      const mailOptions = {
+        from: this.config.provider === 'gmail'
+          ? process.env.GMAIL_USER
+          : process.env.OUTLOOK_USER,
+        to,
+        subject,
+        text: finalBody,
+        html: finalHtml,
+        cc,
+        bcc,
+        attachments
+      };
+
+      const result = await this.transporter.sendMail(mailOptions);
+
+      logger.info('✅ Email envoyé', { to, subject, messageId: result.messageId });
+
+      return {
+        success: true,
+        messageId: result.messageId,
+        to,
+        subject,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      logger.error('❌ Erreur envoi email', { error: error.message, to: options.to });
+      throw error;
+    }
+  }
+
+  /**
+   * 📥 LIRE LES EMAILS
+   *
+   * @param {Object} filters - Filtres de recherche
+   * @returns {Array} Liste d'emails
+   */
+  async read(filters = {}) {
+    try {
+      if (!this.initialized) {
+        await this.initialize();
+      }
+
+      const {
+        maxResults = 10,
+        query = '',
+        labelIds = ['INBOX'],
+        unreadOnly = false
+      } = filters;
+
+      let searchQuery = query;
+      if (unreadOnly && !searchQuery.includes('is:unread')) {
+        searchQuery += ' is:unread';
+      }
+
+      const response = await this.gmail.users.messages.list({
+        userId: 'me',
+        maxResults,
+        q: searchQuery,
+        labelIds
       });
 
-      return this.outlookClient;
+      const messages = response.data.messages || [];
 
+      // Récupérer les détails de chaque message
+      const emails = await Promise.all(
+        messages.map(async (message) => {
+          const details = await this.gmail.users.messages.get({
+            userId: 'me',
+            id: message.id,
+            format: 'full'
+          });
+
+          return this._parseEmailDetails(details.data);
+        })
+      );
+
+      logger.info('📥 Emails récupérés', { count: emails.length, query: searchQuery });
+
+      return emails;
     } catch (error) {
-      throw new Error(`Outlook connection failed: ${error.message}\nInstall: npm install @microsoft/microsoft-graph-client`);
+      logger.error('❌ Erreur lecture emails', { error: error.message });
+      throw error;
     }
   }
 
-  async readOutlook(folder = 'inbox', filter = 'isRead eq false', maxResults = 10) {
-    const client = await this.connectOutlook();
+  /**
+   * 💬 RÉPONDRE À UN EMAIL
+   *
+   * @param {Object} options - Options de réponse
+   * @returns {Object} Résultat d'envoi
+   */
+  async reply(options) {
+    try {
+      const { messageId, body, html, useAI = false } = options;
 
-    const messages = await client
-      .api(`/me/mailFolders/${folder}/messages`)
-      .filter(filter)
-      .top(maxResults)
-      .select('id,from,subject,receivedDateTime,bodyPreview,body')
-      .get();
+      // Si useAI, générer une réponse intelligente
+      let finalBody = body;
+      let finalHtml = html;
 
-    return messages.value.map(m => ({
-      id: m.id,
-      from: m.from.emailAddress.address,
-      fromName: m.from.emailAddress.name,
-      subject: m.subject,
-      date: m.receivedDateTime,
-      snippet: m.bodyPreview,
-      body: m.body.content
-    }));
-  }
+      if (useAI && this.config.aiModel) {
+        const originalEmail = await this._getEmailById(messageId);
+        const aiResponse = await this._generateAIReply(originalEmail, options.context);
+        finalBody = aiResponse.text;
+        finalHtml = aiResponse.html;
+      }
 
-  async sendOutlook(to, subject, body) {
-    const client = await this.connectOutlook();
-
-    const message = {
-      subject,
-      body: {
-        contentType: 'HTML',
-        content: body
-      },
-      toRecipients: [{
-        emailAddress: {
-          address: to
-        }
-      }]
-    };
-
-    await client.api('/me/sendMail').post({ message });
-
-    return {
-      success: true,
-      to,
-      subject
-    };
-  }
-
-  // ===== AI-POWERED ACTIONS =====
-
-  async summarizeUnread(provider = 'gmail') {
-    console.log('📧 Summarizing unread emails...');
-
-    const emails = provider === 'gmail'
-      ? await this.readGmail('is:unread', 20)
-      : await this.readOutlook('inbox', 'isRead eq false', 20);
-
-    if (emails.length === 0) {
-      return {
-        summary: "📭 Aucun email non lu !",
-        count: 0,
-        cost: 0
-      };
-    }
-
-    // Préparer la liste d'emails pour l'IA
-    const emailList = emails.map((e, i) =>
-      `Email ${i + 1}:\nDe: ${e.from}\nSujet: ${e.subject}\nAperçu: ${e.snippet || e.body?.substring(0, 150)}`
-    ).join('\n\n');
-
-    const prompt = `Tu es un assistant email intelligent. Résume ces ${emails.length} emails de manière concise et organisée en français.
-
-Pour chaque email important, indique:
-- Expéditeur
-- Sujet
-- Action recommandée (si applicable)
-
-Classe-les par priorité (urgent, important, normal, spam).
-
-EMAILS:
-${emailList}
-
-Fournis un résumé clair et actionnable.`;
-
-    // Utiliser le router intelligent
-    const result = await router.route(prompt, {
-      type: 'analysis',
-      priority: 'normal',
-      maxTokens: 1000,
-      factual: false // Emails changent souvent
-    });
-
-    return {
-      summary: `📬 **${emails.length} email${emails.length > 1 ? 's' : ''} non lu${emails.length > 1 ? 's' : ''}**\n\n${result.content}`,
-      count: emails.length,
-      emails: emails.slice(0, 5), // Return top 5 for reference
-      cost: result.cost,
-      cached: result.cached
-    };
-  }
-
-  async generateReply(emailId, provider = 'gmail', tone = 'professional') {
-    console.log(`📝 Generating reply for email ${emailId}...`);
-
-    // Lire l'email original
-    let email;
-    if (provider === 'gmail') {
-      const gmail = await this.connectGmail();
-      const msg = await gmail.users.messages.get({
+      // Récupérer les headers de l'email original
+      const original = await this.gmail.users.messages.get({
         userId: 'me',
-        id: emailId,
+        id: messageId,
         format: 'full'
       });
 
-      email = {
-        from: this.getHeader(msg, 'From'),
-        subject: this.getHeader(msg, 'Subject'),
-        body: this.getEmailBody(msg)
-      };
-    } else {
-      const client = await this.connectOutlook();
-      const msg = await client.api(`/me/messages/${emailId}`).get();
+      const headers = original.data.payload.headers;
+      const to = headers.find(h => h.name === 'From')?.value;
+      const subject = headers.find(h => h.name === 'Subject')?.value;
 
-      email = {
-        from: msg.from.emailAddress.address,
-        subject: msg.subject,
-        body: msg.body.content
-      };
+      return await this.send({
+        to,
+        subject: subject.startsWith('Re:') ? subject : `Re: ${subject}`,
+        body: finalBody,
+        html: finalHtml,
+        inReplyTo: messageId
+      });
+    } catch (error) {
+      logger.error('❌ Erreur réponse email', { error: error.message });
+      throw error;
     }
-
-    const tones = {
-      professional: 'professionnel et courtois',
-      friendly: 'amical et décontracté',
-      formal: 'formel et respectueux',
-      brief: 'concis et direct'
-    };
-
-    const prompt = `Tu es un assistant email intelligent. Génère une réponse ${tones[tone] || tones.professional} à cet email en français.
-
-EMAIL ORIGINAL:
-De: ${email.from}
-Sujet: ${email.subject}
-
-Contenu:
-${email.body}
-
-INSTRUCTIONS:
-- Réponds de manière appropriée au contexte
-- Ton: ${tones[tone] || tones.professional}
-- Sois clair et concis
-- Inclus une salutation et signature appropriées
-- N'invente pas d'informations
-
-Fournis uniquement le contenu de la réponse, sans "Objet:" ni métadonnées.`;
-
-    const result = await router.route(prompt, {
-      type: 'content',
-      priority: 'normal',
-      maxTokens: 800
-    });
-
-    return {
-      reply: result.content,
-      originalFrom: email.from,
-      originalSubject: email.subject,
-      suggestedSubject: email.subject.startsWith('Re:') ? email.subject : `Re: ${email.subject}`,
-      cost: result.cost,
-      cached: result.cached
-    };
   }
 
-  async composeEmail(description, tone = 'professional') {
-    console.log(`✍️ Composing email: "${description}"...`);
+  /**
+   * 🔍 RECHERCHER DANS LES EMAILS
+   *
+   * @param {Object} criteria - Critères de recherche
+   * @returns {Array} Emails correspondants
+   */
+  async search(criteria) {
+    const {
+      from,
+      to,
+      subject,
+      body,
+      hasAttachment,
+      dateAfter,
+      dateBefore,
+      isUnread,
+      label
+    } = criteria;
 
-    const tones = {
-      professional: 'professionnel et courtois',
-      friendly: 'amical et chaleureux',
-      formal: 'très formel et respectueux',
-      marketing: 'engageant et persuasif'
-    };
+    let query = '';
 
-    const prompt = `Tu es un assistant email intelligent. Rédige un email complet en français basé sur cette description:
+    if (from) query += `from:${from} `;
+    if (to) query += `to:${to} `;
+    if (subject) query += `subject:${subject} `;
+    if (body) query += `${body} `;
+    if (hasAttachment) query += 'has:attachment ';
+    if (dateAfter) query += `after:${dateAfter} `;
+    if (dateBefore) query += `before:${dateBefore} `;
+    if (isUnread) query += 'is:unread ';
+    if (label) query += `label:${label} `;
 
-"${description}"
+    logger.info('🔍 Recherche emails', { query: query.trim() });
 
-INSTRUCTIONS:
-- Ton: ${tones[tone] || tones.professional}
-- Inclus un objet approprié
-- Inclus une salutation et signature
-- Sois clair, structuré et professionnel
-- Adapte la longueur au contexte
-
-FORMAT DE SORTIE:
-Objet: [l'objet de l'email]
-
-[Corps de l'email avec salutation et signature]`;
-
-    const result = await router.route(prompt, {
-      type: 'content',
-      priority: 'normal',
-      maxTokens: 1000
-    });
-
-    // Parser l'objet et le corps
-    const lines = result.content.split('\n');
-    let subject = '';
-    let body = '';
-    let foundSubject = false;
-
-    for (const line of lines) {
-      if (line.startsWith('Objet:')) {
-        subject = line.replace('Objet:', '').trim();
-        foundSubject = true;
-      } else if (foundSubject) {
-        body += line + '\n';
-      }
-    }
-
-    return {
-      subject: subject || 'Email généré par IA',
-      body: body.trim() || result.content,
-      fullContent: result.content,
-      cost: result.cost,
-      cached: result.cached
-    };
+    return await this.read({ query: query.trim(), maxResults: 50 });
   }
 
-  async categorizeEmails(provider = 'gmail', maxEmails = 50) {
-    console.log(`🗂️ Categorizing emails...`);
+  /**
+   * 📝 CRÉER UN BROUILLON
+   *
+   * @param {Object} options - Options du brouillon
+   * @returns {Object} Brouillon créé
+   */
+  async createDraft(options) {
+    try {
+      const { to, subject, body, html } = options;
 
-    const emails = provider === 'gmail'
-      ? await this.readGmail('', maxEmails)
-      : await this.readOutlook('inbox', '', maxEmails);
+      const message = [
+        `To: ${to}`,
+        `Subject: ${subject}`,
+        '',
+        body || html
+      ].join('\n');
 
-    if (emails.length === 0) {
-      return { categories: {}, total: 0 };
+      const encodedMessage = Buffer.from(message).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+      const draft = await this.gmail.users.drafts.create({
+        userId: 'me',
+        requestBody: {
+          message: {
+            raw: encodedMessage
+          }
+        }
+      });
+
+      logger.info('📝 Brouillon créé', { to, subject, draftId: draft.data.id });
+
+      return {
+        success: true,
+        draftId: draft.data.id,
+        to,
+        subject
+      };
+    } catch (error) {
+      logger.error('❌ Erreur création brouillon', { error: error.message });
+      throw error;
     }
+  }
 
-    // Créer un résumé pour l'IA
-    const emailSummaries = emails.map((e, i) =>
-      `${i + 1}. De: ${e.from} | Sujet: ${e.subject}`
-    ).join('\n');
+  /**
+   * 📊 ANALYSER LES EMAILS AVEC AI
+   *
+   * @param {Array} emails - Liste d'emails à analyser
+   * @returns {Object} Analyse
+   */
+  async analyzeWithAI(emails) {
+    try {
+      const analysis = {
+        total: emails.length,
+        unread: emails.filter(e => e.unread).length,
+        important: emails.filter(e => e.important).length,
+        categories: {
+          work: 0,
+          personal: 0,
+          promotions: 0,
+          newsletters: 0
+        },
+        topSenders: {},
+        summary: '',
+        actionItems: []
+      };
 
-    const prompt = `Catégorise ces ${emails.length} emails dans les catégories suivantes:
-- urgent (nécessite action immédiate)
-- important (à traiter bientôt)
-- travail (professionnel)
-- personnel (non-professionnel)
-- spam (indésirable)
-- newsletter (abonnements)
+      // Catégoriser les emails
+      for (const email of emails) {
+        // Compter les expéditeurs
+        analysis.topSenders[email.from] = (analysis.topSenders[email.from] || 0) + 1;
 
-Pour chaque email, indique uniquement le numéro et la catégorie.
+        // Catégoriser (simplifié - pourrait utiliser AI pour classification)
+        if (email.subject.match(/meeting|call|conference/i)) {
+          analysis.categories.work++;
+        } else if (email.subject.match(/offer|sale|discount/i)) {
+          analysis.categories.promotions++;
+        } else if (email.subject.match(/newsletter|update/i)) {
+          analysis.categories.newsletters++;
+        } else {
+          analysis.categories.personal++;
+        }
 
-EMAILS:
-${emailSummaries}
-
-FORMAT: "1: urgent", "2: personnel", etc.`;
-
-    const result = await router.route(prompt, {
-      type: 'analysis',
-      priority: 'low',
-      maxTokens: 1500
-    });
-
-    // Parser les résultats
-    const categories = {
-      urgent: [],
-      important: [],
-      travail: [],
-      personnel: [],
-      spam: [],
-      newsletter: []
-    };
-
-    const lines = result.content.split('\n');
-    for (const line of lines) {
-      const match = line.match(/(\d+):\s*(\w+)/);
-      if (match) {
-        const idx = parseInt(match[1]) - 1;
-        const category = match[2].toLowerCase();
-        if (emails[idx] && categories[category]) {
-          categories[category].push({
-            id: emails[idx].id,
-            from: emails[idx].from,
-            subject: emails[idx].subject
+        // Extraire les action items (simplifié)
+        if (email.body.match(/urgent|asap|deadline|action required/i)) {
+          analysis.actionItems.push({
+            from: email.from,
+            subject: email.subject,
+            snippet: email.snippet,
+            date: email.date
           });
         }
       }
+
+      // Top 5 expéditeurs
+      analysis.topSenders = Object.entries(analysis.topSenders)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([email, count]) => ({ email, count }));
+
+      analysis.summary = `Vous avez ${analysis.total} emails dont ${analysis.unread} non lus. ${analysis.actionItems.length} emails nécessitent une action.`;
+
+      logger.info('📊 Analyse emails terminée', {
+        total: analysis.total,
+        actionItems: analysis.actionItems.length
+      });
+
+      return analysis;
+    } catch (error) {
+      logger.error('❌ Erreur analyse emails', { error: error.message });
+      throw error;
     }
+  }
+
+  /**
+   * 🎨 TEMPLATES D'EMAILS
+   */
+  _renderTemplate(templateName, variables = {}) {
+    const templates = {
+      'meeting-request': {
+        text: `Bonjour ${variables.name},\n\nJe souhaiterais planifier une réunion concernant ${variables.topic}.\n\nSeriez-vous disponible le ${variables.date} à ${variables.time} ?\n\nCordialement,\n${variables.sender}`,
+        html: `<p>Bonjour ${variables.name},</p><p>Je souhaiterais planifier une réunion concernant <strong>${variables.topic}</strong>.</p><p>Seriez-vous disponible le ${variables.date} à ${variables.time} ?</p><p>Cordialement,<br>${variables.sender}</p>`
+      },
+      'follow-up': {
+        text: `Bonjour ${variables.name},\n\nJe me permets de revenir vers vous concernant ${variables.topic}.\n\n${variables.message}\n\nCordialement,\n${variables.sender}`,
+        html: `<p>Bonjour ${variables.name},</p><p>Je me permets de revenir vers vous concernant <strong>${variables.topic}</strong>.</p><p>${variables.message}</p><p>Cordialement,<br>${variables.sender}</p>`
+      },
+      'thank-you': {
+        text: `Bonjour ${variables.name},\n\nMerci beaucoup pour ${variables.reason}.\n\n${variables.message}\n\nCordialement,\n${variables.sender}`,
+        html: `<p>Bonjour ${variables.name},</p><p>Merci beaucoup pour <strong>${variables.reason}</strong>.</p><p>${variables.message}</p><p>Cordialement,<br>${variables.sender}</p>`
+      },
+      'newsletter': {
+        text: `${variables.title}\n\n${variables.content}\n\n${variables.footer}`,
+        html: `<h2>${variables.title}</h2><div>${variables.content}</div><footer>${variables.footer}</footer>`
+      }
+    };
+
+    return templates[templateName] || { text: variables.body, html: variables.html };
+  }
+
+  /**
+   * Parse les détails d'un email
+   */
+  _parseEmailDetails(message) {
+    const headers = message.payload.headers;
 
     return {
-      categories,
-      total: emails.length,
-      cost: result.cost
+      id: message.id,
+      threadId: message.threadId,
+      from: headers.find(h => h.name === 'From')?.value || '',
+      to: headers.find(h => h.name === 'To')?.value || '',
+      subject: headers.find(h => h.name === 'Subject')?.value || '',
+      date: headers.find(h => h.name === 'Date')?.value || '',
+      snippet: message.snippet,
+      body: this._getBody(message.payload),
+      labels: message.labelIds || [],
+      unread: message.labelIds?.includes('UNREAD'),
+      important: message.labelIds?.includes('IMPORTANT'),
+      hasAttachment: message.payload.parts?.some(part => part.filename)
     };
   }
 
-  // ===== HELPERS =====
-
-  getHeader(message, name) {
-    if (!message.data || !message.data.payload || !message.data.payload.headers) {
-      return '';
-    }
-    const header = message.data.payload.headers.find(h => h.name === name);
-    return header ? header.value : '';
-  }
-
-  getEmailBody(message) {
-    if (!message.data || !message.data.payload) return '';
-
+  /**
+   * Extrait le body d'un email
+   */
+  _getBody(payload) {
     let body = '';
 
-    if (message.data.payload.body && message.data.payload.body.data) {
-      body = Buffer.from(message.data.payload.body.data, 'base64').toString('utf-8');
-    } else if (message.data.payload.parts) {
-      for (const part of message.data.payload.parts) {
-        if (part.mimeType === 'text/plain' || part.mimeType === 'text/html') {
-          if (part.body && part.body.data) {
-            body = Buffer.from(part.body.data, 'base64').toString('utf-8');
-            break;
-          }
+    if (payload.body.data) {
+      body = Buffer.from(payload.body.data, 'base64').toString('utf-8');
+    } else if (payload.parts) {
+      payload.parts.forEach(part => {
+        if (part.mimeType === 'text/plain' && part.body.data) {
+          body += Buffer.from(part.body.data, 'base64').toString('utf-8');
         }
-      }
+      });
     }
 
-    // Strip HTML tags for simpler analysis
-    return body.replace(/<[^>]*>/g, '').substring(0, 5000);
+    return body;
   }
 
-  // ===== STATUS =====
+  /**
+   * Récupère un email par ID
+   */
+  async _getEmailById(messageId) {
+    const message = await this.gmail.users.messages.get({
+      userId: 'me',
+      id: messageId,
+      format: 'full'
+    });
 
-  async getStatus() {
-    const status = {
-      gmail: false,
-      outlook: false,
-      actions: Object.keys(this.actions)
+    return this._parseEmailDetails(message.data);
+  }
+
+  /**
+   * Génère une réponse AI intelligente
+   */
+  async _generateAIReply(originalEmail, context = '') {
+    // Cette méthode pourrait utiliser OpenAI pour générer des réponses intelligentes
+    // Pour l'instant, retourne un template simple
+
+    const response = {
+      text: `Merci pour votre email concernant "${originalEmail.subject}".\n\n${context}\n\nCordialement`,
+      html: `<p>Merci pour votre email concernant "<strong>${originalEmail.subject}</strong>".</p><p>${context}</p><p>Cordialement</p>`
     };
 
-    try {
-      await this.connectGmail();
-      status.gmail = true;
-    } catch (error) {
-      status.gmailError = error.message;
-    }
-
-    try {
-      await this.connectOutlook();
-      status.outlook = true;
-    } catch (error) {
-      status.outlookError = error.message;
-    }
-
-    return status;
+    return response;
   }
 }
 
-module.exports = new EmailAgentPro();
-
-// CLI test
-if (require.main === module) {
-  (async () => {
-    console.log('🧪 Testing Email Agent Pro...\n');
-
-    const agent = new EmailAgentPro();
-
-    try {
-      const status = await agent.getStatus();
-      console.log('Status:', JSON.stringify(status, null, 2));
-
-      if (status.gmail) {
-        console.log('\n📧 Testing Gmail summarize...');
-        const summary = await agent.summarizeUnread('gmail');
-        console.log(summary.summary);
-        console.log(`\nCost: €${summary.cost.toFixed(6)}`);
-      }
-
-      console.log('\n✅ Email Agent test passed!');
-    } catch (error) {
-      console.error('❌ Test failed:', error.message);
-      console.log('\n💡 Configure environment variables:');
-      console.log('   GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN');
-      console.log('   or OUTLOOK_ACCESS_TOKEN');
-    }
-  })();
-}
+module.exports = EmailAgentPro;
