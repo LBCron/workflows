@@ -102,6 +102,7 @@ class ManagerBot {
       voiceTranscriptions: 0,
       errors: 0,
       avgResponseTime: 0,
+      responseTimes: [], // Track response times for avg
       startTime: Date.now()
     };
 
@@ -148,6 +149,35 @@ class ManagerBot {
     }
     logger.info('✅ OpenAI API key validated');
     return key;
+  }
+
+  // SECURITY #2 fix: Input sanitization
+  sanitizeInput(input) {
+    if (typeof input !== 'string') return '';
+
+    return input
+      .trim()
+      .replace(/[<>]/g, '') // Remove HTML-like tags
+      .substring(0, 1000);  // Max length
+  }
+
+  // BUG #24 fix: String hash for caching
+  hashString(str) {
+    return crypto.createHash('md5').update(str.toLowerCase()).digest('hex');
+  }
+
+  // BUG #26 fix: Track response times
+  updateResponseTimeMetric(duration) {
+    this.stats.responseTimes.push(duration);
+
+    // Keep only last 100
+    if (this.stats.responseTimes.length > 100) {
+      this.stats.responseTimes.shift();
+    }
+
+    // Calculate average
+    const sum = this.stats.responseTimes.reduce((a, b) => a + b, 0);
+    this.stats.avgResponseTime = sum / this.stats.responseTimes.length;
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -604,7 +634,7 @@ Assistant commerce Chine-France optimisé.
       this.messageProcessingFlags.add(msgId);
 
       const userId = msg.from.id.toString();
-      const userMessage = msg.text;
+      const userMessage = this.sanitizeInput(msg.text); // SECURITY #2 fix
 
       // Rate limiting
       if (!this.checkRateLimit(userId)) {
@@ -651,12 +681,15 @@ Assistant commerce Chine-France optimisé.
 
         await this.safeSendMessage(msg.chat.id, response);
 
-        // Save conversation
+        // Save conversation and update metrics
+        const duration = Date.now() - startTime;
+        this.updateResponseTimeMetric(duration); // BUG #26 fix
+
         if (typeof this.memory.addConversation === 'function') {
           this.memory.addConversation(userId, userMessage, response, {
             intent: intent.action,
             agent: 'manager',
-            duration: Date.now() - startTime
+            duration
           });
         }
 
