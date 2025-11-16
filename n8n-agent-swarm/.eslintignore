@@ -1,0 +1,11 @@
+node_modules/
+.cache/
+logs/
+*.log
+*.md
+.env
+.env.*
+package-lock.json
+n8n-workflows/
+docs/
+reports/

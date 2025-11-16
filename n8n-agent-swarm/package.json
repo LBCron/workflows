@@ -8,8 +8,13 @@
     "dev": "NODE_ENV=development node scripts/telegram-bot.js",
     "api": "node scripts/api-server.js",
     "test": "node scripts/run-all-tests.js",
+    "test:core": "node scripts/test-core-agents.js",
+    "test:bugs": "node scripts/bug-detector.js",
     "audit": "node scripts/run-full-audit.js",
     "simulate": "node scripts/test-complete-system.js",
+    "lint": "eslint scripts/**/*.js",
+    "lint:fix": "eslint scripts/**/*.js --fix",
+    "optimize": "node scripts/analyze-optimizations-v2.js",
     "setup:gmail": "node scripts/setup/setup-gmail-oauth.js",
     "setup:calendar": "node scripts/setup/setup-calendar-oauth.js"
   },
