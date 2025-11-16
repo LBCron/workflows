@@ -10,6 +10,8 @@ const logger = require('../../core/logger');
 const schedule = require('node-cron');
 const fetch = require('node-fetch');
 const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
 
 // Scrapers (à implémenter)
 const XianyuScraper = require('../../scrapers/xianyu/xianyu-scraper');
@@ -48,6 +50,11 @@ class ManagerBot {
     // State
     this.isScanning = false;
     this.scanQueue = [];
+
+    // Security: Rate limiting (requests per user per minute)
+    this.rateLimits = new Map();
+    this.MAX_REQUESTS_PER_MINUTE = 20;
+    this.MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
   }
 
   async start() {
@@ -348,6 +355,14 @@ Pour restaurer: /memory_import
       const userId = msg.from.id.toString();
       const userMessage = msg.text;
 
+      // Security: Rate limiting
+      if (!this.checkRateLimit(userId)) {
+        return this.bot.sendMessage(
+          msg.chat.id,
+          '⏸️ Trop de requêtes. Attends 1 minute avant de réessayer.'
+        );
+      }
+
       logger.info(`\n💬 Message: "${userMessage}"`);
 
       // Thinking...
@@ -532,6 +547,17 @@ Réponds UNIQUEMENT avec le JSON.
   // ═══════════════════════════════════════════════════════════
 
   async handleScanVendor(intent, chatId) {
+    // Security: Queue system for concurrent scans
+    if (this.isScanning) {
+      this.scanQueue.push({ intent, chatId, type: 'vendor' });
+      return await this.bot.sendMessage(
+        chatId,
+        `⏳ Scan en file d'attente (${this.scanQueue.length} en attente)...`
+      );
+    }
+
+    this.isScanning = true;
+
     await this.bot.sendMessage(chatId, `🔍 Scan du vendeur ${intent.vendor_id} sur ${intent.platform}...`);
 
     const startTime = Date.now();
@@ -613,6 +639,21 @@ Réponds UNIQUEMENT avec le JSON.
     } catch (error) {
       logger.error('❌ Erreur scan:', error);
       throw error;
+    } finally {
+      // Release lock
+      this.isScanning = false;
+
+      // Process queue
+      if (this.scanQueue.length > 0) {
+        const next = this.scanQueue.shift();
+        setTimeout(() => {
+          if (next.type === 'vendor') {
+            this.handleScanVendor(next.intent, next.chatId);
+          } else {
+            this.handleScanProduct(next.intent, next.chatId);
+          }
+        }, 1000); // 1 second delay between scans
+      }
     }
   }
 
@@ -785,6 +826,14 @@ Recommendation = BUY/CONSIDER/SKIP
 
       const doc = msg.document;
 
+      // Security: File size check
+      if (doc.file_size > this.MAX_FILE_SIZE) {
+        return this.bot.sendMessage(
+          msg.chat.id,
+          `❌ Fichier trop volumineux (max ${this.MAX_FILE_SIZE / 1024 / 1024}MB)`
+        );
+      }
+
       // Import mémoire
       if (doc.file_name.includes('Manager_export') && doc.file_name.endsWith('.json.gz')) {
         await this.bot.sendMessage(msg.chat.id, '📥 Import en cours...');
@@ -795,13 +844,19 @@ Recommendation = BUY/CONSIDER/SKIP
 
           const response = await fetch(fileUrl);
           const buffer = await response.buffer();
-          const tempPath = `/tmp/${doc.file_name}`;
+
+          // Security: Sanitize filename to prevent path traversal
+          const safeFilename = path.basename(doc.file_name).replace(/[^a-zA-Z0-9._-]/g, '_');
+          const randomId = crypto.randomBytes(8).toString('hex');
+          const tempPath = `/tmp/manager_import_${randomId}_${safeFilename}`;
+
           fs.writeFileSync(tempPath, buffer);
 
           await this.memory.importFromTelegram(tempPath, msg.from.id.toString());
 
           await this.bot.sendMessage(msg.chat.id, '✅ Mémoire restaurée !');
 
+          // Cleanup
           fs.unlinkSync(tempPath);
 
         } catch (error) {
@@ -835,6 +890,29 @@ Recommendation = BUY/CONSIDER/SKIP
 
   isAdmin(msg) {
     return msg.from.id.toString() === this.adminUserId;
+  }
+
+  // Security: Rate limiting
+  checkRateLimit(userId) {
+    const now = Date.now();
+    const userLimit = this.rateLimits.get(userId) || { count: 0, resetAt: now + 60000 };
+
+    // Reset if time window expired
+    if (now > userLimit.resetAt) {
+      userLimit.count = 0;
+      userLimit.resetAt = now + 60000;
+    }
+
+    // Check limit
+    if (userLimit.count >= this.MAX_REQUESTS_PER_MINUTE) {
+      return false;
+    }
+
+    // Increment
+    userLimit.count++;
+    this.rateLimits.set(userId, userLimit);
+
+    return true;
   }
 
   async sendToAdmin(message) {
