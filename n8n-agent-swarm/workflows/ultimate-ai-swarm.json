@@ -1,0 +1,279 @@
+{
+  "name": "🚀 Ultimate AI Agent Swarm - Intelligent Multi-Model System",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-swarm",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [240, 300],
+      "webhookId": "ai-swarm-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 🎯 Intelligent Request Analyzer & Router\n// Analyzes incoming requests and routes to appropriate agents\n\nconst input = $json.body.message || $json.body.query || '';\nconst userId = $json.body.userId || 'default';\nconst sessionId = $json.body.sessionId || Date.now().toString();\n\n// Analyze request complexity\nfunction analyzeComplexity(text) {\n  const factors = {\n    length: text.length,\n    hasCode: /```|function|class|const|let|var/.test(text),\n    hasResearch: /research|analyze|study|investigate|compare/.test(text),\n    hasCreative: /write|create|generate|compose|draft/.test(text),\n    hasMultiStep: /and|then|also|after|before/.test(text),\n    hasTechnical: /api|code|debug|optimize|algorithm/.test(text)\n  };\n  \n  let score = 0;\n  if (factors.length > 500) score += 3;\n  if (factors.hasCode) score += 4;\n  if (factors.hasResearch) score += 3;\n  if (factors.hasCreative) score += 2;\n  if (factors.hasMultiStep) score += 3;\n  if (factors.hasTechnical) score += 4;\n  \n  return {\n    score,\n    level: score < 5 ? 'simple' : score < 10 ? 'medium' : score < 15 ? 'complex' : 'expert',\n    factors\n  };\n}\n\n// Determine agent type\nfunction determineAgent(text, complexity) {\n  const lower = text.toLowerCase();\n  \n  // Research Agent\n  if (/research|analyze|study|investigate|compare|data|statistics/.test(lower)) {\n    return 'research';\n  }\n  \n  // Content Creator Agent\n  if (/write|create|generate|compose|draft|article|blog|content/.test(lower)) {\n    return 'content';\n  }\n  \n  // Code Assistant Agent\n  if (/code|debug|optimize|function|api|algorithm|programming/.test(lower)) {\n    return 'code';\n  }\n  \n  // Email Agent\n  if (/email|send|reply|gmail|message/.test(lower)) {\n    return 'email';\n  }\n  \n  // Calendar Agent\n  if (/calendar|meeting|schedule|event|appointment/.test(lower)) {\n    return 'calendar';\n  }\n  \n  // YouTube Agent\n  if (/youtube|video|watch|channel/.test(lower)) {\n    return 'youtube';\n  }\n  \n  // Web Agent\n  if (/search|weather|news|web|internet|google/.test(lower)) {\n    return 'web';\n  }\n  \n  // Meta Agent\n  if (/create.*agent|add.*integration|modify.*system/.test(lower)) {\n    return 'meta';\n  }\n  \n  // Default to research for complex, content for simple\n  return complexity.score > 10 ? 'research' : 'content';\n}\n\nconst complexity = analyzeComplexity(input);\nconst agentType = determineAgent(input, complexity);\n\nreturn {\n  json: {\n    input,\n    userId,\n    sessionId,\n    complexity,\n    agentType,\n    timestamp: new Date().toISOString(),\n    metadata: {\n      requestLength: input.length,\n      estimatedTokens: Math.ceil(input.length / 4),\n      priority: complexity.level === 'expert' ? 'high' : 'normal'\n    }\n  }\n};"
+      },
+      "id": "request-analyzer",
+      "name": "🧠 Request Analyzer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.agentType }}",
+              "operation": "equals",
+              "value2": "research"
+            }
+          ]
+        }
+      },
+      "id": "router-research",
+      "name": "Route: Research?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 100]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.agentType }}",
+              "operation": "equals",
+              "value2": "content"
+            }
+          ]
+        }
+      },
+      "id": "router-content",
+      "name": "Route: Content?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.agentType }}",
+              "operation": "equals",
+              "value2": "code"
+            }
+          ]
+        }
+      },
+      "id": "router-code",
+      "name": "Route: Code?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 🔬 Research Agent Pro - Advanced research with intelligent model selection\n\nconst input = $input.item.json.input;\nconst complexity = $input.item.json.complexity;\nconst sessionId = $input.item.json.sessionId;\n\n// Load intelligent router\nconst IntelligentRouter = require('/scripts/ai-core/intelligent-router-pro');\nconst router = new IntelligentRouter();\n\n// Research-specific system prompt\nconst systemPrompt = `You are Research Agent Pro, an advanced AI researcher.\n\nCapabilities:\n- Deep analysis of complex topics\n- Multi-source information synthesis\n- Statistical analysis and data interpretation\n- Comparative studies\n- Trend analysis\n- Academic-quality research\n\nAlways:\n- Provide well-researched, accurate information\n- Cite sources when possible\n- Structure findings clearly\n- Highlight key insights\n- Suggest related areas for exploration`;\n\n// Execute research with intelligent model selection\nasync function executeResearch() {\n  try {\n    const response = await router.executeWithCache(\n      input,\n      {\n        systemPrompt,\n        complexity: complexity.level,\n        type: 'research',\n        maxTokens: 2000,\n        temperature: 0.7,\n        sessionId\n      }\n    );\n    \n    return {\n      json: {\n        agent: 'research',\n        response: response.content,\n        model: response.model,\n        cached: response.cached || false,\n        cost: response.cost || 0,\n        tokens: response.tokens || { input: 0, output: 0 },\n        timestamp: new Date().toISOString(),\n        success: true\n      }\n    };\n  } catch (error) {\n    return {\n      json: {\n        agent: 'research',\n        error: error.message,\n        success: false\n      }\n    };\n  }\n}\n\nreturn await executeResearch();"
+      },
+      "id": "research-agent-pro",
+      "name": "🔬 Research Agent Pro",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ✍️ Content Creator Agent Pro - Advanced content generation\n\nconst input = $input.item.json.input;\nconst complexity = $input.item.json.complexity;\nconst sessionId = $input.item.json.sessionId;\n\nconst IntelligentRouter = require('/scripts/ai-core/intelligent-router-pro');\nconst router = new IntelligentRouter();\n\nconst systemPrompt = `You are Content Creator Agent Pro, a master of content creation.\n\nCapabilities:\n- Blog posts and articles\n- Social media content\n- Marketing copy\n- Technical documentation\n- Creative writing\n- SEO-optimized content\n\nAlways:\n- Match the requested tone and style\n- Create engaging, well-structured content\n- Optimize for readability\n- Include relevant keywords naturally\n- Provide actionable value`;\n\nasync function createContent() {\n  try {\n    const response = await router.executeWithCache(\n      input,\n      {\n        systemPrompt,\n        complexity: complexity.level,\n        type: 'content',\n        maxTokens: 2000,\n        temperature: 0.8,\n        sessionId\n      }\n    );\n    \n    return {\n      json: {\n        agent: 'content',\n        response: response.content,\n        model: response.model,\n        cached: response.cached || false,\n        cost: response.cost || 0,\n        tokens: response.tokens || { input: 0, output: 0 },\n        timestamp: new Date().toISOString(),\n        success: true\n      }\n    };\n  } catch (error) {\n    return {\n      json: {\n        agent: 'content',\n        error: error.message,\n        success: false\n      }\n    };\n  }\n}\n\nreturn await createContent();"
+      },
+      "id": "content-agent-pro",
+      "name": "✍️ Content Creator Pro",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 💻 Code Assistant Agent Pro - Advanced coding assistance\n\nconst input = $input.item.json.input;\nconst complexity = $input.item.json.complexity;\nconst sessionId = $input.item.json.sessionId;\n\nconst IntelligentRouter = require('/scripts/ai-core/intelligent-router-pro');\nconst router = new IntelligentRouter();\n\nconst systemPrompt = `You are Code Assistant Agent Pro, an expert programming assistant.\n\nCapabilities:\n- Code generation in multiple languages\n- Debugging and optimization\n- Architecture design\n- API integration\n- Performance analysis\n- Security best practices\n\nAlways:\n- Write clean, efficient, well-documented code\n- Follow best practices and design patterns\n- Include error handling\n- Provide explanations for complex logic\n- Suggest optimizations when relevant`;\n\nasync function assistWithCode() {\n  try {\n    const response = await router.executeWithCache(\n      input,\n      {\n        systemPrompt,\n        complexity: complexity.level,\n        type: 'code',\n        maxTokens: 3000,\n        temperature: 0.3,\n        sessionId\n      }\n    );\n    \n    return {\n      json: {\n        agent: 'code',\n        response: response.content,\n        model: response.model,\n        cached: response.cached || false,\n        cost: response.cost || 0,\n        tokens: response.tokens || { input: 0, output: 0 },\n        timestamp: new Date().toISOString(),\n        success: true\n      }\n    };\n  } catch (error) {\n    return {\n      json: {\n        agent: 'code',\n        error: error.message,\n        success: false\n      }\n    };\n  }\n}\n\nreturn await assistWithCode();"
+      },
+      "id": "code-agent-pro",
+      "name": "💻 Code Assistant Pro",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 📊 Response Aggregator & Analytics\n\nconst result = $input.item.json;\nconst originalRequest = $('🧠 Request Analyzer').item.json;\n\n// Load budget guardian for cost tracking\nconst BudgetGuardian = require('/scripts/monitoring/budget-guardian');\nconst guardian = new BudgetGuardian();\n\n// Track cost\nif (result.cost && result.cost > 0) {\n  guardian.trackCost(result.cost, result.model || 'unknown');\n}\n\n// Get budget status\nconst budgetStatus = guardian.getStatus();\n\n// Format response\nconst formattedResponse = {\n  // Core response\n  success: result.success || false,\n  agent: result.agent,\n  response: result.response || result.error,\n  \n  // Request metadata\n  request: {\n    input: originalRequest.input,\n    complexity: originalRequest.complexity.level,\n    estimatedTokens: originalRequest.metadata.estimatedTokens\n  },\n  \n  // Execution metadata\n  execution: {\n    model: result.model,\n    cached: result.cached || false,\n    cost: result.cost || 0,\n    tokens: result.tokens || { input: 0, output: 0 },\n    timestamp: result.timestamp\n  },\n  \n  // Budget info\n  budget: {\n    used: budgetStatus.used,\n    limit: budgetStatus.limit,\n    percentage: budgetStatus.percentage,\n    remaining: budgetStatus.remaining,\n    status: budgetStatus.status\n  },\n  \n  // Performance metrics\n  performance: {\n    responseTime: Date.now() - new Date(originalRequest.timestamp).getTime(),\n    cacheHit: result.cached || false,\n    costSavings: result.cached ? result.cost : 0\n  }\n};\n\nreturn { json: formattedResponse };"
+      },
+      "id": "response-aggregator",
+      "name": "📊 Response Aggregator",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json, null, 2) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "return-response",
+      "name": "Return Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1340, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "🧠 Request Analyzer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧠 Request Analyzer": {
+      "main": [
+        [
+          {
+            "node": "Route: Research?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Route: Content?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Route: Code?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route: Research?": {
+      "main": [
+        [
+          {
+            "node": "🔬 Research Agent Pro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route: Content?": {
+      "main": [
+        [
+          {
+            "node": "✍️ Content Creator Pro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route: Code?": {
+      "main": [
+        [
+          {
+            "node": "💻 Code Assistant Pro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔬 Research Agent Pro": {
+      "main": [
+        [
+          {
+            "node": "📊 Response Aggregator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✍️ Content Creator Pro": {
+      "main": [
+        [
+          {
+            "node": "📊 Response Aggregator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💻 Code Assistant Pro": {
+      "main": [
+        [
+          {
+            "node": "📊 Response Aggregator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Response Aggregator": {
+      "main": [
+        [
+          {
+            "node": "Return Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "AI",
+      "id": "ai-tag"
+    },
+    {
+      "name": "Advanced",
+      "id": "advanced-tag"
+    },
+    {
+      "name": "Multi-Agent",
+      "id": "multi-agent-tag"
+    }
+  ],
+  "triggerCount": 0,
+  "updatedAt": "2024-11-16T00:00:00.000Z",
+  "versionId": "1.0.0"
+}
