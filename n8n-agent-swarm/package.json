@@ -8,6 +8,8 @@
     "start:legacy": "node scripts/telegram-bot.js",
     "dev": "NODE_ENV=development nodemon src/bot/index.js",
     "dev:legacy": "NODE_ENV=development node scripts/telegram-bot.js",
+    "manager": "node src/bots/telegram/manager-bot.js",
+    "manager:dev": "NODE_ENV=development nodemon src/bots/telegram/manager-bot.js",
     "prestart": "node scripts/validate-env.js",
     "validate": "node scripts/validate-env.js",
     "api": "node scripts/api-server.js",
