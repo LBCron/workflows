@@ -1,0 +1,165 @@
+{
+  "research-agent-pro": {
+    "file": "research-agent-pro.js",
+    "className": "ResearchAgentPro",
+    "description": "Agent de recherche intelligente multi-niveaux avec sources multiples",
+    "capabilities": [
+      "recherche rapide",
+      "recherche standard",
+      "recherche approfondie",
+      "recherche expert"
+    ],
+    "methods": [
+      "research",
+      "determineDepth",
+      "buildPrompt"
+    ],
+    "apis": [
+      "openai",
+      "anthropic",
+      "groq"
+    ],
+    "created": "2024-11-16T00:00:00.000Z",
+    "auto_generated": false,
+    "generator": "manual",
+    "version": "1.0.0"
+  },
+  "content-creator-pro": {
+    "file": "content-creator-pro.js",
+    "className": "ContentCreatorPro",
+    "description": "Création de contenu professionnel avec optimisation SEO",
+    "capabilities": [
+      "créer blog posts",
+      "créer social media posts",
+      "créer emails",
+      "créer scripts vidéo",
+      "optimisation SEO"
+    ],
+    "methods": [
+      "create",
+      "determineQuality",
+      "buildPrompt"
+    ],
+    "apis": [
+      "openai",
+      "anthropic",
+      "groq"
+    ],
+    "created": "2024-11-16T00:00:00.000Z",
+    "auto_generated": false,
+    "generator": "manual",
+    "version": "1.0.0"
+  },
+  "code-assistant-pro": {
+    "file": "code-assistant-pro.js",
+    "className": "CodeAssistantPro",
+    "description": "Assistant de développement pour génération, debug et optimisation de code",
+    "capabilities": [
+      "générer code",
+      "débugger code",
+      "optimiser code",
+      "expliquer code",
+      "review code"
+    ],
+    "methods": [
+      "assist",
+      "buildPrompt",
+      "parseCodeResponse"
+    ],
+    "apis": [
+      "openai",
+      "anthropic"
+    ],
+    "created": "2024-11-16T00:00:00.000Z",
+    "auto_generated": false,
+    "generator": "manual",
+    "version": "1.0.0"
+  },
+  "email-agent-pro": {
+    "file": "email-agent-pro.js",
+    "className": "EmailAgentPro",
+    "description": "Gestion emails Gmail et Outlook avec intelligence artificielle",
+    "capabilities": [
+      "lire emails",
+      "envoyer emails",
+      "résumer emails",
+      "générer réponses",
+      "catégoriser emails"
+    ],
+    "methods": [
+      "summarizeUnread",
+      "generateReply",
+      "composeEmail",
+      "categorizeEmails",
+      "readGmail",
+      "sendGmail"
+    ],
+    "apis": [
+      "gmail",
+      "outlook",
+      "openai",
+      "anthropic"
+    ],
+    "created": "2024-11-16T00:00:00.000Z",
+    "auto_generated": false,
+    "generator": "manual",
+    "version": "1.0.0"
+  },
+  "calendar-agent-pro": {
+    "file": "calendar-agent-pro.js",
+    "className": "CalendarAgentPro",
+    "description": "Gestion Google Calendar avec scheduling intelligent",
+    "capabilities": [
+      "voir agenda",
+      "créer événements",
+      "smart scheduling",
+      "trouver créneaux libres",
+      "résumer semaine"
+    ],
+    "methods": [
+      "todayAgenda",
+      "weekAgenda",
+      "smartSchedule",
+      "findFreeSlots",
+      "listEvents",
+      "createEvent"
+    ],
+    "apis": [
+      "google-calendar",
+      "openai",
+      "anthropic"
+    ],
+    "created": "2024-11-16T00:00:00.000Z",
+    "auto_generated": false,
+    "generator": "manual",
+    "version": "1.0.0"
+  },
+  "meta-agent": {
+    "file": "meta-agent.js",
+    "className": "MetaAgent",
+    "description": "Créateur automatique d'agents - permet au système de s'auto-développer",
+    "capabilities": [
+      "créer nouveaux agents",
+      "analyser besoins",
+      "générer code",
+      "tester agents",
+      "enregistrer agents"
+    ],
+    "methods": [
+      "createAgent",
+      "analyzeRequest",
+      "generateCode",
+      "testAgent",
+      "registerAgent",
+      "listAgents"
+    ],
+    "apis": [
+      "openai",
+      "anthropic"
+    ],
+    "created": "2024-11-16T00:00:00.000Z",
+    "auto_generated": false,
+    "generator": "manual",
+    "version": "1.0.0"
+  }
+}
