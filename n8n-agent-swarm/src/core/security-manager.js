@@ -80,60 +80,72 @@ class SecurityManager extends EventEmitter {
    * Audit logging
    */
   async auditLog(event) {
-    const logEntry = {
-      timestamp: new Date().toISOString(),
-      eventType: event.type,
-      userId: event.userId,
-      ip: event.ip || 'unknown',
-      action: event.action,
-      resource: event.resource,
-      result: event.result,
-      metadata: event.metadata || {},
-      severity: event.severity || 'info'
-    };
+    try {
+      const logEntry = {
+        timestamp: new Date().toISOString(),
+        eventType: event.type,
+        userId: event.userId,
+        ip: event.ip || 'unknown',
+        action: event.action,
+        resource: event.resource,
+        result: event.result,
+        metadata: event.metadata || {},
+        severity: event.severity || 'info'
+      };
 
-    await fs.appendFile(
-      this.auditLogPath,
-      JSON.stringify(logEntry) + '\n',
-      'utf8'
-    );
+      await fs.appendFile(
+        this.auditLogPath,
+        JSON.stringify(logEntry) + '\n',
+        'utf8'
+      );
 
-    this.metrics.auditLogs++;
+      this.metrics.auditLogs++;
 
-    if (logEntry.severity === 'critical') {
-      await this.handleCriticalEvent(logEntry);
+      if (logEntry.severity === 'critical') {
+        await this.handleCriticalEvent(logEntry);
+      }
+
+      logger.info(`📝 Audit: ${event.type} by ${event.userId} - ${event.result}`);
+
+    } catch (error) {
+      logger.error('Audit log error:', error);
+      // Continue execution même en cas d'erreur d'audit
     }
-
-    logger.info(`📝 Audit: ${event.type} by ${event.userId} - ${event.result}`);
   }
 
   /**
    * Security event logging
    */
   async logSecurityEvent(event) {
-    const securityEvent = {
-      timestamp: new Date().toISOString(),
-      type: event.type,
-      severity: event.severity,
-      userId: event.userId,
-      ip: event.ip,
-      details: event.details,
-      threat_level: event.threatLevel || 'low'
-    };
+    try {
+      const securityEvent = {
+        timestamp: new Date().toISOString(),
+        type: event.type,
+        severity: event.severity,
+        userId: event.userId,
+        ip: event.ip,
+        details: event.details,
+        threat_level: event.threatLevel || 'low'
+      };
 
-    await fs.appendFile(
-      this.securityEventsPath,
-      JSON.stringify(securityEvent) + '\n',
-      'utf8'
-    );
+      await fs.appendFile(
+        this.securityEventsPath,
+        JSON.stringify(securityEvent) + '\n',
+        'utf8'
+      );
 
-    this.metrics.securityEvents++;
+      this.metrics.securityEvents++;
 
-    if (this.intrusionDetection.enabled) {
-      await this.analyzeSecurityEvent(securityEvent);
+      if (this.intrusionDetection.enabled) {
+        await this.analyzeSecurityEvent(securityEvent);
+      }
+
+      this.emit('security_event', securityEvent);
+
+    } catch (error) {
+      logger.error('Security event logging error:', error);
+      // Continue execution même en cas d'erreur de logging
     }
-
-    this.emit('security_event', securityEvent);
   }
 
   /**
@@ -399,16 +411,27 @@ class SecurityManager extends EventEmitter {
   startSecurityMonitoring() {
     // Nettoyer failed attempts toutes les heures
     setInterval(() => {
-      const oneHourAgo = Date.now() - 60 * 60 * 1000;
+      try {
+        const oneHourAgo = Date.now() - 60 * 60 * 1000;
+        let cleaned = 0;
 
-      for (const [userId, attempts] of this.failedAttempts.entries()) {
-        const recent = attempts.filter(a => a.timestamp > oneHourAgo);
+        for (const [userId, attempts] of this.failedAttempts.entries()) {
+          const recent = attempts.filter(a => a.timestamp > oneHourAgo);
 
-        if (recent.length === 0) {
-          this.failedAttempts.delete(userId);
-        } else {
-          this.failedAttempts.set(userId, recent);
+          if (recent.length === 0) {
+            this.failedAttempts.delete(userId);
+            cleaned++;
+          } else {
+            this.failedAttempts.set(userId, recent);
+          }
         }
+
+        if (cleaned > 0) {
+          logger.info(`🧹 Cleaned ${cleaned} expired failed attempt records`);
+        }
+
+      } catch (error) {
+        logger.error('Failed attempts cleanup error:', error);
       }
     }, 60 * 60 * 1000);
 

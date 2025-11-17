@@ -273,22 +273,31 @@ class PerformanceMonitoring extends EventEmitter {
    * Tracking
    */
   trackRequest(userId, action, duration, success = true) {
-    this.metrics.requests.total++;
+    try {
+      this.metrics.requests.total++;
 
-    if (success) {
-      this.metrics.requests.success++;
-    } else {
-      this.metrics.requests.errors++;
+      if (success) {
+        this.metrics.requests.success++;
+      } else {
+        this.metrics.requests.errors++;
+      }
+
+      this.responseTimes.push(duration);
+
+      if (this.responseTimes.length > this.maxResponseTimes) {
+        this.responseTimes.shift();
+      }
+
+      this.updateResponseTimeMetrics();
+
+      // Appel async non-bloquant avec error handling
+      this.checkAlerts().catch(error => {
+        logger.error('Alert check failed:', error);
+      });
+
+    } catch (error) {
+      logger.error('Track request error:', error);
     }
-
-    this.responseTimes.push(duration);
-
-    if (this.responseTimes.length > this.maxResponseTimes) {
-      this.responseTimes.shift();
-    }
-
-    this.updateResponseTimeMetrics();
-    this.checkAlerts();
   }
 
   updateResponseTimeMetrics() {
@@ -434,20 +443,25 @@ class PerformanceMonitoring extends EventEmitter {
   }
 
   cleanupExpiredCache() {
-    const now = Date.now();
-    let cleaned = 0;
+    try {
+      const now = Date.now();
+      let cleaned = 0;
 
-    for (const level of ['l1', 'l2', 'l3']) {
-      for (const [key, entry] of this.cache[level].entries()) {
-        if (now - entry.timestamp > this.cacheLimits[level].ttl) {
-          this.cache[level].delete(key);
-          cleaned++;
+      for (const level of ['l1', 'l2', 'l3']) {
+        for (const [key, entry] of this.cache[level].entries()) {
+          if (now - entry.timestamp > this.cacheLimits[level].ttl) {
+            this.cache[level].delete(key);
+            cleaned++;
+          }
         }
       }
-    }
 
-    if (cleaned > 0) {
-      logger.info(`🧹 Cleaned ${cleaned} expired cache entries`);
+      if (cleaned > 0) {
+        logger.info(`🧹 Cleaned ${cleaned} expired cache entries`);
+      }
+
+    } catch (error) {
+      logger.error('Cache cleanup error:', error);
     }
   }
 

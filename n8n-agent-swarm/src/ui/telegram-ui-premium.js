@@ -20,9 +20,13 @@ class TelegramUIPremium {
 
     // Progress trackers
     this.progressTrackers = new Map();
+    this.progressTrackerMaxAge = 60 * 60 * 1000; // 1 hour
 
     // Conversation flows actifs
     this.activeFlows = new Map();
+
+    // Auto-cleanup pour éviter memory leaks
+    this.startAutoCleanup();
 
     logger.info('🎨 UI Premium initialized');
   }
@@ -330,6 +334,39 @@ class TelegramUIPremium {
       }, 4000);
 
       setTimeout(() => clearInterval(interval), duration);
+    }
+  }
+
+  /**
+   * Auto-cleanup pour éviter memory leaks
+   */
+  startAutoCleanup() {
+    // Nettoyage des progress trackers toutes les 15 minutes
+    setInterval(() => {
+      this.cleanupStaleTrackers();
+    }, 15 * 60 * 1000);
+
+    logger.info('✅ Auto-cleanup started for UI Premium');
+  }
+
+  cleanupStaleTrackers() {
+    try {
+      const now = Date.now();
+      let cleaned = 0;
+
+      for (const [messageId, tracker] of this.progressTrackers.entries()) {
+        if (now - tracker.startTime > this.progressTrackerMaxAge) {
+          this.progressTrackers.delete(messageId);
+          cleaned++;
+        }
+      }
+
+      if (cleaned > 0) {
+        logger.info(`🧹 Cleaned ${cleaned} stale progress trackers`);
+      }
+
+    } catch (error) {
+      logger.error('Progress tracker cleanup error:', error);
     }
   }
 
