@@ -12,9 +12,13 @@
  * - BUG #7: Long message splitting
  * - Et 26 autres bugs...
  *
- * @version 2.0.0
+ * @version 2.0.1
  * @production-ready true
  */
+
+// 🔧 BUG FIX: Load environment variables BEFORE anything else
+// The bot was crashing because dotenv was never loaded!
+require('dotenv').config({ path: '.env.manager' });
 
 const TelegramBot = require('node-telegram-bot-api');
 const UniversalMemory = require('../../core/memory/universal-memory-system');
