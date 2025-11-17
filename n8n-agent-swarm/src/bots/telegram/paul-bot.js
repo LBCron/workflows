@@ -16,7 +16,8 @@
  * - Intelligent routing with AI
  */
 
-require('dotenv').config({ path: '.env.paul' });
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../../../.env.paul') });
 const TelegramBot = require('node-telegram-bot-api');
 const { OpenAI } = require('openai');
 
@@ -25,11 +26,11 @@ const UniversalMemory = require('../../core/memory/universal-memory-system');
 const logger = require('../../core/logger');
 
 // Agents (Pro)
-const ResearchAgent = require('../../agents/research-agent-pro');
-const ContentCreator = require('../../agents/content-creator-pro');
-const CodeAssistant = require('../../agents/code-assistant-pro');
-const EmailAgent = require('../../agents/email-agent-pro');
-const CalendarAgent = require('../../agents/calendar-agent-pro');
+const ResearchAgent = require('../../agents/research/research.agent');
+const ContentCreator = require('../../agents/content/content.agent');
+const CodeAssistant = require('../../agents/code/code.agent');
+const EmailAgent = require('../../agents/email/email.agent');
+const CalendarAgent = require('../../agents/calendar/calendar.agent');
 
 // NEW: Advanced Agents
 const DriveAgent = require('../../agents/drive-agent');
@@ -39,7 +40,7 @@ const WebSearchAgent = require('../../agents/web-search-agent');
 const SetupWizard = require('./setup-wizard');
 
 // Monitoring
-const BudgetGuardian = require('../../monitoring/budget-guardian');
+const BudgetGuardian = require('../../core/budget/budget.guardian');
 
 /**
  * Validation
@@ -796,8 +797,8 @@ Mentionne "code" ou "fonction"
 
           case 'research':
             {
-              const agent = new ResearchAgent();
-              result = await agent.research(userMessage, 'auto');
+              // ResearchAgent est déjà une instance exportée
+              result = await ResearchAgent.research(userMessage, 'auto');
 
               if (result.cost > 0) {
                 await this.budgetGuardian.checkAndRecord(result.cost, { model: result.model });
@@ -810,8 +811,8 @@ Mentionne "code" ou "fonction"
 
           case 'content':
             {
-              const agent = new ContentCreator();
-              result = await agent.create({
+              // ContentCreator est déjà une instance exportée
+              result = await ContentCreator.create({
                 type: 'blog-post',
                 topic: userMessage,
                 quality: 'auto'
@@ -828,8 +829,8 @@ Mentionne "code" ou "fonction"
 
           case 'code':
             {
-              const agent = new CodeAssistant();
-              result = await agent.assist({
+              // CodeAssistant est déjà une instance exportée
+              result = await CodeAssistant.assist({
                 action: 'generate',
                 description: userMessage,
                 language: 'auto'

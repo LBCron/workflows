@@ -7,7 +7,7 @@
  * ou utilisé comme référence par le Meta-Agent
  */
 
-const router = require('../ai-core/intelligent-router-pro');
+const router = require('../../core/router/router');
 
 class AgentTemplate {
   constructor() {

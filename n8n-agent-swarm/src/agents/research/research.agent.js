@@ -6,7 +6,7 @@
  * Agent de recherche multi-niveau avec coûts optimisés
  */
 
-const router = require('../ai-core/intelligent-router-pro');
+const router = require('../../core/router/router');
 
 class ResearchAgentPro {
   constructor() {

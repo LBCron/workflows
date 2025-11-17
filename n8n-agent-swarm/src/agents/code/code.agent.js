@@ -6,7 +6,7 @@
  * Assistant code intelligent avec coûts optimisés
  */
 
-const router = require('../ai-core/intelligent-router-pro');
+const router = require('../../core/router/router');
 
 class CodeAssistantPro {
   constructor() {

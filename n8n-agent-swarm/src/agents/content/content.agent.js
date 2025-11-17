@@ -6,7 +6,7 @@
  * Création de contenu avec qualité adaptative
  */
 
-const router = require('../ai-core/intelligent-router-pro');
+const router = require('../../core/router/router');
 
 class ContentCreatorPro {
   constructor() {

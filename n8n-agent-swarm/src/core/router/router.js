@@ -11,8 +11,8 @@
  * - Stats en temps réel
  */
 
-const budgetGuardian = require('../monitoring/budget-guardian');
-const megaCache = require('../optimization/mega-cache');
+const budgetGuardian = require('../budget/budget.guardian');
+const megaCache = require('../cache/cache');
 const { LLMClientFactory } = require('./llm-clients');
 
 class IntelligentRouterPro {

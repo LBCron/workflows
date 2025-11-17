@@ -17,8 +17,9 @@
  */
 
 // 🔧 BUG FIX: Load environment variables BEFORE anything else
-// The bot was crashing because dotenv was never loaded!
-require('dotenv').config({ path: '.env.manager' });
+// Import path first for dotenv config
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../../../.env.manager') });
 
 const TelegramBot = require('node-telegram-bot-api');
 const UniversalMemory = require('../../core/memory/universal-memory-system');
@@ -28,7 +29,6 @@ const schedule = require('node-cron');
 const fetch = require('node-fetch');
 const fs = require('fs');
 const fsPromises = require('fs').promises;
-const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
 
