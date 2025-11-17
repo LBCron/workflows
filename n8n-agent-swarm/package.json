@@ -5,8 +5,10 @@
   "main": "src/bot/index.js",
   "scripts": {
     "start": "node src/bot/index.js",
+    "start:vault": "node src/bot/bot-with-vault.js",
     "start:legacy": "node scripts/telegram-bot.js",
     "dev": "NODE_ENV=development nodemon src/bot/index.js",
+    "dev:vault": "NODE_ENV=development nodemon src/bot/bot-with-vault.js",
     "dev:legacy": "NODE_ENV=development node scripts/telegram-bot.js",
     "prestart": "node scripts/validate-env.js",
     "validate": "node scripts/validate-env.js",
@@ -14,6 +16,7 @@
     "test": "node scripts/run-all-tests.js",
     "test:core": "node scripts/test-core-agents.js",
     "test:bugs": "node scripts/bug-detector.js",
+    "test:vault": "node scripts/test-credential-vault.js",
     "test:unit": "jest tests/unit",
     "test:integration": "jest tests/integration",
     "test:watch": "jest --watch",

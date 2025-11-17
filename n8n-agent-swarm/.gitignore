@@ -118,6 +118,11 @@ ENV/
 *secret*.json
 service-account*.json
 
+# Universal Credential Vault (encrypted credentials storage)
+.credentials.vault
+.credentials.vault.bak
+*.vault
+
 # API Keys
 api_keys.txt
 keys.txt
