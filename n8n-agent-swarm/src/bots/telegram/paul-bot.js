@@ -42,6 +42,9 @@ const SetupWizard = require('./setup-wizard');
 // Monitoring
 const BudgetGuardian = require('../../core/budget/budget.guardian');
 
+// Universal Credential Vault
+const UniversalCredentialVault = require('../../core/universal-credential-vault');
+
 /**
  * Validation
  */
@@ -104,6 +107,9 @@ class PaulBot {
     // Setup Wizard (initialized after bot ready)
     this.setupWizard = null;
 
+    // Universal Credential Vault
+    this.vault = new UniversalCredentialVault();
+
     // Rate limiting
     this.rateLimitMap = new Map();
     this.RATE_LIMIT_WINDOW = 60000; // 1 minute
@@ -111,6 +117,7 @@ class PaulBot {
 
     // State
     this.messageProcessingFlags = new Set();
+    this.conversationState = new Map(); // For multi-step conversations
 
     // Stats
     this.stats = {
@@ -313,6 +320,64 @@ Exemples:
     // /help - Help
     this.bot.onText(/\/help/, async (msg) => {
       await this.handleHelp(msg.chat.id);
+    });
+
+    // === CREDENTIAL VAULT COMMANDS ===
+
+    // /credentials - Menu principal du vault
+    this.bot.onText(/\/credentials/, async (msg) => {
+      if (!this.isAdmin(msg)) return;
+      await this.handleCredentialsMenu(msg.chat.id);
+    });
+
+    // /list_services - Lister services disponibles
+    this.bot.onText(/\/list_services/, async (msg) => {
+      if (!this.isAdmin(msg)) return;
+      await this.handleListAvailableServices(msg.chat.id);
+    });
+
+    // /remove_service - Supprimer service
+    this.bot.onText(/\/remove_service(?:\s+(.+))?/, async (msg, match) => {
+      if (!this.isAdmin(msg)) return;
+      const serviceId = match[1];
+
+      if (!serviceId) {
+        const configured = await this.vault.listConfiguredServices();
+        if (configured.length === 0) {
+          return await this.safeSendMessage(msg.chat.id, 'Aucun service configuré.');
+        }
+
+        let message = '🗑️ Services configurés:\n\n';
+        configured.forEach(s => {
+          message += `• ${s.name} (${s.id})\n`;
+        });
+        message += '\nUtilisez: /remove_service [id]';
+
+        return await this.safeSendMessage(msg.chat.id, message);
+      }
+
+      try {
+        await this.vault.deleteCredentials(serviceId);
+        await this.safeSendMessage(msg.chat.id, `✅ Service '${serviceId}' supprimé.`);
+      } catch (error) {
+        await this.safeSendMessage(msg.chat.id, `❌ Erreur: ${error.message}`);
+      }
+    });
+
+    // /export_vault - Export backup chiffré
+    this.bot.onText(/\/export_vault/, async (msg) => {
+      if (!this.isAdmin(msg)) return;
+
+      await this.safeSendMessage(msg.chat.id,
+        '🔐 **Export Vault**\n\n' +
+        'Envoyez un mot de passe pour chiffrer le backup:\n\n' +
+        '⚠️ Le message sera supprimé après traitement.'
+      );
+
+      this.conversationState.set(msg.chat.id, {
+        action: 'export_vault',
+        waitingFor: 'password'
+      });
     });
   }
 
@@ -661,6 +726,297 @@ Mentionne "code" ou "fonction"
   }
 
   /**
+   * === CREDENTIAL VAULT HANDLERS ===
+   */
+
+  /**
+   * Handle /credentials command - Main vault menu
+   */
+  async handleCredentialsMenu(chatId) {
+    try {
+      const configured = await this.vault.listConfiguredServices();
+
+      let message = `🔐 **Credential Vault Universel**\n\n`;
+
+      if (configured.length === 0) {
+        message += `Aucun service configuré.\n\n`;
+      } else {
+        message += `**Services configurés (${configured.length}) :**\n\n`;
+
+        // Grouper par type
+        const byType = {};
+        configured.forEach(service => {
+          if (!byType[service.type]) {
+            byType[service.type] = [];
+          }
+          byType[service.type].push(service);
+        });
+
+        const typeEmojis = {
+          'email': '📧',
+          'commerce': '🛍️',
+          'productivity': '📊',
+          'social': '💬',
+          'payment': '💳',
+          'custom': '⚙️'
+        };
+
+        Object.entries(byType).forEach(([type, services]) => {
+          message += `${typeEmojis[type] || '•'} **${type.toUpperCase()}**\n`;
+          services.forEach(s => {
+            message += `  ✅ ${s.name}\n`;
+          });
+          message += `\n`;
+        });
+      }
+
+      message += `**Commandes:**\n`;
+      message += `/list_services - Services disponibles\n`;
+      message += `/remove_service - Supprimer service\n`;
+      message += `/export_vault - Backup chiffré\n`;
+
+      const keyboard = {
+        inline_keyboard: [
+          [
+            { text: '📧 Email', callback_data: 'vault_services_email' },
+            { text: '🛍️ Commerce', callback_data: 'vault_services_commerce' }
+          ],
+          [
+            { text: '📊 Productivity', callback_data: 'vault_services_productivity' },
+            { text: '💬 Social', callback_data: 'vault_services_social' }
+          ],
+          [
+            { text: '💳 Payment', callback_data: 'vault_services_payment' },
+            { text: '⚙️ Custom', callback_data: 'vault_services_custom' }
+          ],
+          [
+            { text: '📋 Voir tout', callback_data: 'vault_services_all' }
+          ]
+        ]
+      };
+
+      await this.safeSendMessage(chatId, message, {
+        reply_markup: JSON.stringify(keyboard)
+      });
+
+    } catch (error) {
+      logger.error('Error handleCredentialsMenu:', error);
+      await this.safeSendMessage(chatId, `❌ Erreur: ${error.message}`);
+    }
+  }
+
+  /**
+   * Handle /list_services command
+   */
+  async handleListAvailableServices(chatId) {
+    try {
+      const services = this.vault.getSupportedServices();
+
+      // Grouper par type
+      const byType = {};
+      services.forEach(service => {
+        if (!byType[service.type]) {
+          byType[service.type] = [];
+        }
+        byType[service.type].push(service);
+      });
+
+      let message = `📋 **Services Supportés (${services.length})**\n\n`;
+
+      const typeEmojis = {
+        'email': '📧',
+        'commerce': '🛍️',
+        'productivity': '📊',
+        'social': '💬',
+        'payment': '💳',
+        'custom': '⚙️'
+      };
+
+      Object.entries(byType).forEach(([type, serviceList]) => {
+        message += `${typeEmojis[type] || '•'} **${type.toUpperCase()}:**\n`;
+        serviceList.forEach(s => {
+          message += `  • ${s.name} (\`${s.id}\`)\n`;
+        });
+        message += `\n`;
+      });
+
+      message += `**Pour ajouter un service :**\n`;
+      message += `Cliquez sur le bouton ci-dessous ou utilisez la commande manuelle.\n`;
+
+      const keyboard = {
+        inline_keyboard: [
+          [{ text: '📧 Ajouter Email', callback_data: 'vault_add_category_email' }],
+          [{ text: '🛍️ Ajouter Commerce', callback_data: 'vault_add_category_commerce' }],
+          [{ text: '📊 Ajouter Productivity', callback_data: 'vault_add_category_productivity' }],
+          [{ text: '💬 Ajouter Social', callback_data: 'vault_add_category_social' }],
+          [{ text: '💳 Ajouter Payment', callback_data: 'vault_add_category_payment' }],
+          [{ text: '⚙️ Service Custom', callback_data: 'vault_add_custom' }]
+        ]
+      };
+
+      await this.safeSendMessage(chatId, message, {
+        reply_markup: JSON.stringify(keyboard)
+      });
+
+    } catch (error) {
+      logger.error('Error handleListAvailableServices:', error);
+      await this.safeSendMessage(chatId, `❌ Erreur: ${error.message}`);
+    }
+  }
+
+  /**
+   * Handle services by type (callback)
+   */
+  async handleServicesByType(chatId, type, messageId) {
+    try {
+      const services = this.vault.getSupportedServices()
+        .filter(s => type === 'all' || s.type === type);
+
+      const configured = await this.vault.listConfiguredServices();
+      const configuredIds = configured.map(s => s.id);
+
+      let message = `**Services ${type === 'all' ? 'Tous' : type} :**\n\n`;
+
+      services.forEach(service => {
+        const isConfigured = configuredIds.includes(service.id);
+        const icon = isConfigured ? '✅' : '➕';
+        message += `${icon} ${service.name}\n`;
+      });
+
+      const keyboard = {
+        inline_keyboard: services.slice(0, 10).map(s => [{
+          text: `➕ ${s.name}`,
+          callback_data: `vault_add_${s.id}`
+        }])
+      };
+
+      keyboard.inline_keyboard.push([{
+        text: '◀️ Retour',
+        callback_data: 'vault_back'
+      }]);
+
+      await this.bot.editMessageText(message, {
+        chat_id: chatId,
+        message_id: messageId,
+        reply_markup: JSON.stringify(keyboard)
+      });
+
+    } catch (error) {
+      logger.error('Error handleServicesByType:', error);
+    }
+  }
+
+  /**
+   * Handle add service start (callback)
+   */
+  async handleAddServiceStart(chatId, serviceId) {
+    try {
+      const template = this.vault.getServiceTemplate(serviceId);
+
+      if (!template) {
+        return await this.safeSendMessage(chatId, `❌ Service inconnu: ${serviceId}`);
+      }
+
+      const serviceName = this.vault.getServiceDisplayName(serviceId);
+
+      let message = `🔐 **Configuration ${serviceName}**\n\n`;
+      message += template.instructions + `\n\n`;
+      message += `**Champs requis:**\n`;
+      template.fields.forEach(field => {
+        message += `• ${field}\n`;
+      });
+
+      if (template.optional && template.optional.length > 0) {
+        message += `\n**Champs optionnels:**\n`;
+        template.optional.forEach(field => {
+          message += `• ${field}\n`;
+        });
+      }
+
+      message += `\n**Format :**\n`;
+      message += `Envoyez un message avec:\n`;
+      message += `\`\`\`\n`;
+      message += `/set_${serviceId}\n`;
+      template.fields.forEach(field => {
+        message += `${field}: votre_valeur\n`;
+      });
+      message += `\`\`\`\n`;
+
+      message += `\n⚠️ **Le message sera supprimé automatiquement après traitement.**`;
+
+      await this.safeSendMessage(chatId, message);
+
+    } catch (error) {
+      logger.error('Error handleAddServiceStart:', error);
+      await this.safeSendMessage(chatId, `❌ Erreur: ${error.message}`);
+    }
+  }
+
+  /**
+   * Handle /set_XXX credentials
+   */
+  async handleSetCredentials(msg) {
+    const chatId = msg.chat.id;
+    const text = msg.text;
+
+    // Supprimer le message immédiatement (sécurité)
+    try {
+      await this.bot.deleteMessage(chatId, msg.message_id);
+    } catch (error) {
+      logger.warn('Could not delete message:', error.message);
+    }
+
+    // Parser
+    const lines = text.split('\n');
+    const command = lines[0].trim();
+    const serviceId = command.replace('/set_', '');
+
+    const template = this.vault.getServiceTemplate(serviceId);
+
+    if (!template) {
+      return await this.safeSendMessage(chatId,
+        `❌ **Service inconnu: ${serviceId}**\n\nUtilisez /list_services pour voir les services disponibles.`
+      );
+    }
+
+    const credentials = {};
+
+    // Parser chaque ligne
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+
+      const colonIndex = line.indexOf(':');
+      if (colonIndex === -1) continue;
+
+      const key = line.substring(0, colonIndex).trim();
+      const value = line.substring(colonIndex + 1).trim();
+
+      if (key && value) {
+        credentials[key] = value;
+      }
+    }
+
+    try {
+      // Sauvegarder
+      await this.vault.setCredentials(serviceId, credentials);
+
+      const serviceName = this.vault.getServiceDisplayName(serviceId);
+
+      await this.safeSendMessage(chatId,
+        `✅ **${serviceName} configuré !**\n\n` +
+        `Vous pouvez maintenant utiliser ce service.`
+      );
+
+    } catch (error) {
+      logger.error('Set credentials error:', error);
+      await this.safeSendMessage(chatId,
+        `❌ **Erreur configuration**\n\n${error.message}\n\nVérifiez le format et réessayez.`
+      );
+    }
+  }
+
+  /**
    * Setup callback query handler
    */
   setupCallbackQueryHandler() {
@@ -672,6 +1028,12 @@ Mentionne "code" ou "fonction"
         // Route setup_ callbacks to Setup Wizard
         if (data.startsWith('setup_')) {
           await this.setupWizard.handleCallback(query);
+          return;
+        }
+
+        // Route vault_ callbacks to Credential Vault
+        if (data.startsWith('vault_')) {
+          await this.handleVaultCallback(query);
           return;
         }
 
@@ -736,14 +1098,64 @@ Mentionne "code" ou "fonction"
   }
 
   /**
+   * Handle vault-related callbacks
+   */
+  async handleVaultCallback(query) {
+    const chatId = query.message.chat.id;
+    const data = query.callback_data;
+
+    try {
+      await this.bot.answerCallbackQuery(query.id);
+
+      if (data.startsWith('vault_services_')) {
+        const type = data.replace('vault_services_', '');
+        await this.handleServicesByType(chatId, type, query.message.message_id);
+      }
+      else if (data.startsWith('vault_add_category_')) {
+        const category = data.replace('vault_add_category_', '');
+        await this.handleServicesByType(chatId, category, query.message.message_id);
+      }
+      else if (data.startsWith('vault_add_')) {
+        const serviceId = data.replace('vault_add_', '');
+        await this.bot.deleteMessage(chatId, query.message.message_id).catch(() => {});
+        await this.handleAddServiceStart(chatId, serviceId);
+      }
+      else if (data === 'vault_back') {
+        await this.bot.deleteMessage(chatId, query.message.message_id).catch(() => {});
+        await this.handleCredentialsMenu(chatId);
+      }
+
+    } catch (error) {
+      logger.error('Vault callback error:', error);
+      await this.bot.answerCallbackQuery(query.id, {
+        text: `❌ Erreur: ${error.message}`
+      }).catch(() => {});
+    }
+  }
+
+  /**
    * Setup message handler
    */
   setupMessageHandler() {
     this.bot.on('message', async (msg) => {
-      // Skip commands, voice, documents
+      // Handle /set_XXX credentials (special case - must be processed before skipping commands)
+      if (msg.text && msg.text.startsWith('/set_')) {
+        if (this.isAdmin(msg)) {
+          await this.handleSetCredentials(msg);
+        }
+        return;
+      }
+
+      // Skip other commands, voice, documents
       if (msg.text?.startsWith('/') || msg.voice || msg.document) return;
       if (!this.isAdmin(msg)) return;
       if (!msg.text) return;
+
+      // Handle conversation states (export vault, etc.)
+      if (this.conversationState.has(msg.chat.id)) {
+        await this.handleConversationState(msg);
+        return;
+      }
 
       // Let Setup Wizard handle OAuth codes first
       if (this.setupWizard) {
@@ -881,6 +1293,52 @@ Mentionne "code" ou "fonction"
         this.messageProcessingFlags.delete(msgId);
       }
     });
+  }
+
+  /**
+   * Handle conversation states (multi-step)
+   */
+  async handleConversationState(msg) {
+    const chatId = msg.chat.id;
+    const state = this.conversationState.get(chatId);
+
+    if (!state) return;
+
+    try {
+      if (state.action === 'export_vault' && state.waitingFor === 'password') {
+        // Delete password message immediately
+        await this.bot.deleteMessage(chatId, msg.message_id).catch(() => {});
+
+        const password = msg.text.trim();
+
+        if (password.length < 8) {
+          await this.safeSendMessage(chatId, '❌ Le mot de passe doit contenir au moins 8 caractères.');
+          return;
+        }
+
+        // Export
+        const backup = await this.vault.exportEncrypted(password);
+
+        // Send as JSON file
+        const backupJson = JSON.stringify(backup, null, 2);
+        const filename = `vault_backup_${new Date().toISOString().split('T')[0]}.json`;
+
+        await this.bot.sendDocument(chatId, Buffer.from(backupJson), {
+          caption: `🔐 Backup Vault chiffré\n\nVersion: ${backup.version}\nExporté: ${backup.exportedAt}\n\n⚠️ Gardez ce fichier en sécurité!`
+        }, {
+          filename: filename,
+          contentType: 'application/json'
+        });
+
+        // Clear state
+        this.conversationState.delete(chatId);
+      }
+
+    } catch (error) {
+      logger.error('Conversation state error:', error);
+      await this.safeSendMessage(chatId, `❌ Erreur: ${error.message}`);
+      this.conversationState.delete(chatId);
+    }
   }
 
   /**
