@@ -28,6 +28,73 @@ if (!process.env.TELEGRAM_BOT_TOKEN) {
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true });
 const budgetGuardian = new BudgetGuardian();
 
+/**
+ * Rate limiting storage
+ */
+const rateLimitMap = new Map();
+const RATE_LIMIT_WINDOW = 60000; // 1 minute
+const MAX_REQUESTS_PER_WINDOW = 10;
+
+/**
+ * Check rate limiting
+ */
+function checkRateLimit(userId) {
+  const now = Date.now();
+  const userLimit = rateLimitMap.get(userId) || { count: 0, resetTime: now + RATE_LIMIT_WINDOW };
+
+  if (now > userLimit.resetTime) {
+    // Reset window
+    rateLimitMap.set(userId, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+    return true;
+  }
+
+  if (userLimit.count >= MAX_REQUESTS_PER_WINDOW) {
+    const waitTime = Math.ceil((userLimit.resetTime - now) / 1000);
+    throw new Error(`🚫 Rate limit atteint. Attends ${waitTime}s avant de réessayer.`);
+  }
+
+  userLimit.count++;
+  rateLimitMap.set(userId, userLimit);
+  return true;
+}
+
+/**
+ * Safe send message with markdown escaping
+ */
+async function safeSendMessage(chatId, text, options = {}) {
+  try {
+    // Escape markdown special characters
+    const escaped = text.replace(/([_*\[\]()~`>#+\-=|{}.!\\])/g, '\\$1');
+
+    return await bot.sendMessage(chatId, escaped, {
+      parse_mode: 'MarkdownV2',
+      ...options
+    });
+  } catch (error) {
+    // Fallback without markdown
+    console.error('Markdown send failed, trying plain text:', error.message);
+    try {
+      return await bot.sendMessage(chatId, text, { ...options, parse_mode: undefined });
+    } catch (fallbackError) {
+      console.error('Plain text send also failed:', fallbackError.message);
+      throw fallbackError;
+    }
+  }
+}
+
+/**
+ * Send message with inline keyboard buttons
+ */
+async function sendMessageWithButtons(chatId, text, buttons) {
+  const keyboard = {
+    inline_keyboard: buttons
+  };
+
+  return await safeSendMessage(chatId, text, {
+    reply_markup: JSON.stringify(keyboard)
+  });
+}
+
 console.log(`
 ╔═══════════════════════════════════════════════════════════════╗
 ║                                                               ║
@@ -134,29 +201,35 @@ bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id;
   const userName = msg.from.first_name || msg.from.username || 'ami';
 
-  await bot.sendMessage(
-    chatId,
+  const message =
     `👋 Salut ${userName}!\n\n` +
-      `Je suis ton assistant AI ultra-complet avec **5 agents sophistiqués**:\n\n` +
-      `🔬 **Research Agent** - Recherche et analyse\n` +
-      `✍️  **Content Creator** - Création de contenu\n` +
-      `💻 **Code Assistant** - Aide au code\n` +
-      `📧 **Email Agent** - Gestion emails (Gmail/Outlook)\n` +
-      `📅 **Calendar Agent** - Gestion agenda (Google Calendar)\n\n` +
-      `**Exemples:**\n` +
-      `• "Recherche les tendances IA 2024"\n` +
-      `• "Écris un article sur le web3"\n` +
-      `• "Code une fonction fibonacci en Python"\n` +
-      `• "Résume mes emails non lus"\n` +
-      `• "Quel est mon agenda aujourd'hui ?"\n\n` +
-      `**Commandes:**\n` +
-      `/stats - Statistiques\n` +
-      `/budget - Budget status\n` +
-      `/agents - Liste agents\n` +
-      `/create - Créer agent\n` +
-      `/help - Aide complète`,
-    { parse_mode: 'Markdown' }
-  );
+    `Je suis ton assistant AI ultra-complet avec 5 agents sophistiqués:\n\n` +
+    `🔬 Research Agent - Recherche et analyse\n` +
+    `✍️ Content Creator - Création de contenu\n` +
+    `💻 Code Assistant - Aide au code\n` +
+    `📧 Email Agent - Gestion emails\n` +
+    `📅 Calendar Agent - Gestion agenda\n\n` +
+    `Que veux-tu faire ?`;
+
+  const buttons = [
+    [
+      { text: '🔍 Recherche', callback_data: 'action_research' },
+      { text: '✍️ Créer', callback_data: 'action_content' }
+    ],
+    [
+      { text: '💻 Code', callback_data: 'action_code' },
+      { text: '📧 Emails', callback_data: 'action_email' }
+    ],
+    [
+      { text: '📅 Agenda', callback_data: 'action_calendar' },
+      { text: '📊 Stats', callback_data: 'action_stats' }
+    ],
+    [
+      { text: '❓ Aide', callback_data: 'action_help' }
+    ]
+  ];
+
+  await sendMessageWithButtons(chatId, message, buttons);
 });
 
 /**
@@ -342,6 +415,143 @@ bot.onText(/\/agents/, async (msg) => {
 });
 
 /**
+ * Callback query handler (boutons interactifs)
+ */
+bot.on('callback_query', async (query) => {
+  const chatId = query.message.chat.id;
+  const data = query.callback_data;
+  const messageId = query.message.message_id;
+
+  try {
+    // Acknowledge the callback
+    await bot.answerCallbackQuery(query.id);
+
+    // Delete the button message
+    await bot.deleteMessage(chatId, messageId);
+
+    // Handle action
+    switch (data) {
+      case 'action_research':
+        await safeSendMessage(chatId, '🔍 Recherche activée! Pose ta question...');
+        break;
+
+      case 'action_content':
+        await safeSendMessage(chatId, '✍️ Création de contenu! Dis-moi quoi créer...');
+        break;
+
+      case 'action_code':
+        await safeSendMessage(chatId, '💻 Code Assistant! Décris ce que tu veux coder...');
+        break;
+
+      case 'action_email':
+        await sendMessageWithButtons(chatId, '📧 Email Agent - Que veux-tu faire?', [
+          [
+            { text: '📥 Lire emails', callback_data: 'email_read' },
+            { text: '📤 Envoyer email', callback_data: 'email_send' }
+          ],
+          [
+            { text: '📊 Résumé', callback_data: 'email_summary' }
+          ]
+        ]);
+        break;
+
+      case 'action_calendar':
+        await sendMessageWithButtons(chatId, '📅 Calendar Agent - Que veux-tu faire?', [
+          [
+            { text: '📆 Aujourd\'hui', callback_data: 'cal_today' },
+            { text: '📅 Semaine', callback_data: 'cal_week' }
+          ],
+          [
+            { text: '➕ Créer event', callback_data: 'cal_create' }
+          ]
+        ]);
+        break;
+
+      case 'action_stats':
+        // Execute /stats command
+        const status = await budgetGuardian.getStatus();
+        const statsMessage =
+          `📊 Statistiques Système\n\n` +
+          `Budget:\n` +
+          `• Utilisé: €${status.spent.toFixed(2)} / €${status.limit}\n` +
+          `• Restant: €${status.remaining.toFixed(2)}\n` +
+          `• Status: ${status.status}\n\n` +
+          `Performance:\n` +
+          `• Uptime: ${Math.floor(process.uptime() / 60)}min\n` +
+          `• Mémoire: ${Math.floor(process.memoryUsage().heapUsed / 1024 / 1024)}MB`;
+        await safeSendMessage(chatId, statsMessage);
+        break;
+
+      case 'action_help':
+        await safeSendMessage(
+          chatId,
+          `❓ Guide d'utilisation\n\n` +
+            `Agents disponibles:\n` +
+            `• 🔬 Research - Questions et analyses\n` +
+            `• ✍️ Content - Création de contenu\n` +
+            `• 💻 Code - Aide au développement\n` +
+            `• 📧 Email - Gestion emails\n` +
+            `• 📅 Calendar - Gestion agenda\n\n` +
+            `Commandes:\n` +
+            `/start - Menu principal\n` +
+            `/stats - Statistiques\n` +
+            `/budget - État budget\n` +
+            `/agents - Liste agents`
+        );
+        break;
+
+      // Email sub-actions
+      case 'email_read':
+        await safeSendMessage(chatId, '📥 Lis tes emails avec: "Résume mes emails"');
+        break;
+
+      case 'email_send':
+        await safeSendMessage(chatId, '📤 Envoie un email avec: "Envoie un email à..."');
+        break;
+
+      case 'email_summary':
+        await safeSendMessage(chatId, '📊 Génération du résumé...');
+        // Trigger email summary
+        try {
+          const result = await EmailAgent.summarizeUnread('gmail');
+          await safeSendMessage(chatId, result.summary);
+        } catch (error) {
+          await safeSendMessage(chatId, `❌ Erreur: ${error.message}`);
+        }
+        break;
+
+      // Calendar sub-actions
+      case 'cal_today':
+        await safeSendMessage(chatId, '📆 Chargement de ton agenda...');
+        try {
+          const result = await CalendarAgent.todayAgenda();
+          await safeSendMessage(chatId, result.summary);
+        } catch (error) {
+          await safeSendMessage(chatId, `❌ Erreur: ${error.message}`);
+        }
+        break;
+
+      case 'cal_week':
+        await safeSendMessage(chatId, '📅 Chargement de ta semaine...');
+        try {
+          const result = await CalendarAgent.weekAgenda();
+          await safeSendMessage(chatId, result.summary);
+        } catch (error) {
+          await safeSendMessage(chatId, `❌ Erreur: ${error.message}`);
+        }
+        break;
+
+      case 'cal_create':
+        await safeSendMessage(chatId, '➕ Crée un event avec: "Crée un meeting mardi 14h avec..."');
+        break;
+    }
+  } catch (error) {
+    console.error('Callback query error:', error);
+    await safeSendMessage(chatId, `❌ Erreur: ${error.message}`);
+  }
+});
+
+/**
  * Messages normaux
  */
 bot.on('message', async (msg) => {
@@ -352,6 +562,7 @@ bot.on('message', async (msg) => {
 
   const chatId = msg.chat.id;
   const text = msg.text;
+  const userId = msg.from.id;
 
   if (!text) {
     return;
@@ -359,10 +570,12 @@ bot.on('message', async (msg) => {
 
   console.log(`📨 Message de ${msg.from.first_name}: "${text.substring(0, 50)}..."`);
 
-  // Envoyer "typing..."
-  await bot.sendChatAction(chatId, 'typing');
-
   try {
+    // Check rate limiting
+    checkRateLimit(userId);
+
+    // Envoyer "typing..."
+    await bot.sendChatAction(chatId, 'typing');
     // Détecter l'intent
     const intent = detectIntent(text);
     console.log(`🎯 Intent détecté: ${intent}`);
