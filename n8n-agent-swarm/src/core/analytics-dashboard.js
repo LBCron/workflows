@@ -27,6 +27,7 @@ class AnalyticsDashboard extends EventEmitter {
         retention: 0
       },
       system: {
+        totalRequests: 0,
         uptime: 0,
         requestsPerSecond: 0,
         averageResponseTime: 0,
@@ -72,6 +73,7 @@ class AnalyticsDashboard extends EventEmitter {
    */
   trackRequest(userId, duration, success = true) {
     // Update metrics
+    this.metrics.system.totalRequests++;
     this.metrics.business.totalInteractions++;
 
     if (success) {

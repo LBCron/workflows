@@ -11,22 +11,34 @@
  */
 
 const TelegramBot = require('node-telegram-bot-api');
+const { OpenAI } = require('openai');
 const CredentialVault = require('../core/credential-vault-ultimate');
 const LearningEngine = require('../core/learning-engine-v2');
 const iPhoneSync = require('../core/iphone-sync-ultimate');
 const PerformanceMonitoring = require('../core/performance-monitoring');
 const UXPremiumAdvanced = require('../ui/ux-premium-advanced');
 const SecurityManager = require('../core/security-manager');
+const VoiceMultimodalEngine = require('../ai/voice-multimodal-engine');
+const ContextMemoryEngine = require('../ai/context-memory-engine');
 const logger = require('../utils/logger');
 
 // Import agents
 const ResearchAgent = require('../../scripts/agents/research-agent-pro');
-const EmailAgent = require('../../scripts/agents/email-agent-pro');
-const CalendarAgent = require('../../scripts/agents/calendar-agent-pro');
+const EmailAgentPro = require('../agents/email-agent-pro');
+const CalendarAgentSmart = require('../agents/calendar-agent-smart');
 
 class PaulBot {
   constructor(token) {
     this.bot = new TelegramBot(token, { polling: true });
+
+    // Initialize OpenAI client (if API key available)
+    this.openai = process.env.OPENAI_API_KEY ? new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY
+    }) : null;
+
+    if (!this.openai) {
+      logger.warn('⚠️ OpenAI API key not found - AI features will be limited');
+    }
 
     // Initialiser tous les systèmes
     this.vault = new CredentialVault();
@@ -35,6 +47,10 @@ class PaulBot {
     this.ui = new UXPremiumAdvanced(this.bot);
     this.security = new SecurityManager();
     this.iPhoneSync = null; // Initialisé après
+
+    // AI Engines
+    this.voiceEngine = new VoiceMultimodalEngine(this.openai, this.bot);
+    this.contextEngine = new ContextMemoryEngine(this.openai);
 
     // Agent instances
     this.agents = {};

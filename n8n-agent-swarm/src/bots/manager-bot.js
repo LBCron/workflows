@@ -11,6 +11,7 @@
  */
 
 const TelegramBot = require('node-telegram-bot-api');
+const { OpenAI } = require('openai');
 const PerformanceMonitoring = require('../core/performance-monitoring');
 const SecurityManager = require('../core/security-manager');
 const SecurityEnterprise = require('../core/security-enterprise');
@@ -19,12 +20,23 @@ const CredentialVault = require('../core/credential-vault-ultimate');
 const AutomationEngine = require('../core/automation-engine');
 const AnalyticsDashboard = require('../core/analytics-dashboard');
 const MultiUserSystem = require('../core/multi-user-system');
+const VoiceMultimodalEngine = require('../ai/voice-multimodal-engine');
+const ContextMemoryEngine = require('../ai/context-memory-engine');
 const logger = require('../utils/logger');
 
 class ManagerBot {
   constructor(token, adminChatIds = []) {
     this.bot = new TelegramBot(token, { polling: true });
     this.adminChatIds = new Set(adminChatIds);
+
+    // Initialize OpenAI client (if API key available)
+    this.openai = process.env.OPENAI_API_KEY ? new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY
+    }) : null;
+
+    if (!this.openai) {
+      logger.warn('⚠️ OpenAI API key not found - AI features will be limited');
+    }
 
     // Systèmes
     this.performance = new PerformanceMonitoring();
@@ -37,6 +49,10 @@ class ManagerBot {
     this.automation = new AutomationEngine();
     this.analytics = new AnalyticsDashboard();
     this.multiUser = new MultiUserSystem();
+
+    // AI Engines
+    this.voiceEngine = new VoiceMultimodalEngine(this.openai, this.bot);
+    this.contextEngine = new ContextMemoryEngine(this.openai);
 
     // Auto-report config
     this.autoReport = {
