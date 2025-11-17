@@ -170,7 +170,8 @@ Explique:
   }
 }
 
-module.exports = new CodeAssistantPro();
+// Export class instead of singleton to allow instantiation
+module.exports = CodeAssistantPro;
 
 // CLI
 if (require.main === module) {

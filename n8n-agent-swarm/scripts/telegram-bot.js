@@ -204,12 +204,12 @@ bot.onText(/\/stats/, async (msg) => {
   const chatId = msg.chat.id;
 
   try {
-    const budgetStatus = budgetGuardian.getStatus();
+    const budgetStatus = await budgetGuardian.getStatus();
 
     const statsMessage =
       `**📊 Statistiques Système**\n\n` +
       `**Budget:**\n` +
-      `• Utilisé: €${budgetStatus.used.toFixed(2)} / €${budgetStatus.limit}\n` +
+      `• Utilisé: €${budgetStatus.spent.toFixed(2)} / €${budgetStatus.limit}\n` +
       `• Restant: €${budgetStatus.remaining.toFixed(2)}\n` +
       `• Status: ${budgetStatus.status}\n\n` +
       `**Performance:**\n` +
@@ -229,15 +229,15 @@ bot.onText(/\/budget/, async (msg) => {
   const chatId = msg.chat.id;
 
   try {
-    const status = budgetGuardian.getStatus();
+    const status = await budgetGuardian.getStatus();
 
-    const percentage = ((status.used / status.limit) * 100).toFixed(1);
+    const percentage = ((status.spent / status.limit) * 100).toFixed(1);
     const bar = '█'.repeat(Math.floor(percentage / 5)) + '░'.repeat(20 - Math.floor(percentage / 5));
 
     const budgetMessage =
       `**💰 Budget Status**\n\n` +
       `${bar}\n\n` +
-      `• Utilisé: €${status.used.toFixed(4)}\n` +
+      `• Utilisé: €${status.spent.toFixed(4)}\n` +
       `• Limite: €${status.limit}\n` +
       `• Restant: €${status.remaining.toFixed(4)}\n` +
       `• Pourcentage: ${percentage}%\n` +
@@ -377,7 +377,7 @@ bot.on('message', async (msg) => {
             result = await EmailAgent.summarizeUnread('gmail');
 
             if (result.cost > 0) {
-              budgetGuardian.trackCost(result.cost, 'email-summarize');
+              await budgetGuardian.checkAndRecord(result.cost, { action: 'email-summarize' });
             }
 
             await bot.sendMessage(chatId, result.summary, { parse_mode: 'Markdown' });
@@ -408,7 +408,7 @@ bot.on('message', async (msg) => {
             result = await CalendarAgent.smartSchedule(text);
 
             if (result.cost > 0) {
-              budgetGuardian.trackCost(result.cost, 'calendar-smart-schedule');
+              await budgetGuardian.checkAndRecord(result.cost, { action: 'calendar-smart-schedule' });
             }
 
             if (result.success) {
@@ -448,7 +448,7 @@ bot.on('message', async (msg) => {
 
           // Track cost
           if (result.cost > 0) {
-            budgetGuardian.trackCost(result.cost, result.model);
+            await budgetGuardian.checkAndRecord(result.cost, { model: result.model });
           }
 
           const response = formatResponse(result, 'research');
@@ -459,11 +459,15 @@ bot.on('message', async (msg) => {
       case 'content':
         {
           const agent = new ContentCreator();
-          result = await agent.create(text, 'auto', 'auto');
+          result = await agent.create({
+            type: 'blog-post',
+            topic: text,
+            quality: 'auto'
+          });
 
           // Track cost
           if (result.cost > 0) {
-            budgetGuardian.trackCost(result.cost, result.model);
+            await budgetGuardian.checkAndRecord(result.cost, { model: result.model });
           }
 
           const response = formatResponse(result, 'content');
@@ -474,11 +478,15 @@ bot.on('message', async (msg) => {
       case 'code':
         {
           const agent = new CodeAssistant();
-          result = await agent.assist(text, 'auto', 'auto');
+          result = await agent.assist({
+            action: 'generate',
+            description: text,
+            language: 'auto'
+          });
 
           // Track cost
           if (result.cost > 0) {
-            budgetGuardian.trackCost(result.cost, result.model);
+            await budgetGuardian.checkAndRecord(result.cost, { model: result.model });
           }
 
           // Envoyer le code en format Markdown

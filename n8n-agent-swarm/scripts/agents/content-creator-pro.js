@@ -154,7 +154,8 @@ class ContentCreatorPro {
   }
 }
 
-module.exports = new ContentCreatorPro();
+// Export class instead of singleton to allow instantiation
+module.exports = ContentCreatorPro;
 
 // CLI
 if (require.main === module) {

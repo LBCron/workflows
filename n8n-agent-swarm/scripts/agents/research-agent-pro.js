@@ -135,7 +135,8 @@ class ResearchAgentPro {
   }
 }
 
-module.exports = new ResearchAgentPro();
+// Export class instead of singleton to allow instantiation
+module.exports = ResearchAgentPro;
 
 // CLI
 if (require.main === module) {
