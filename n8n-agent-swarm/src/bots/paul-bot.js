@@ -15,7 +15,7 @@ const CredentialVault = require('../core/credential-vault-ultimate');
 const LearningEngine = require('../core/learning-engine-v2');
 const iPhoneSync = require('../core/iphone-sync-ultimate');
 const PerformanceMonitoring = require('../core/performance-monitoring');
-const TelegramUI = require('../ui/telegram-ui-premium');
+const UXPremiumAdvanced = require('../ui/ux-premium-advanced');
 const SecurityManager = require('../core/security-manager');
 const logger = require('../utils/logger');
 
@@ -32,7 +32,7 @@ class PaulBot {
     this.vault = new CredentialVault();
     this.learningEngine = new LearningEngine();
     this.performance = new PerformanceMonitoring();
-    this.ui = new TelegramUI(this.bot);
+    this.ui = new UXPremiumAdvanced(this.bot);
     this.security = new SecurityManager();
     this.iPhoneSync = null; // Initialisé après
 
@@ -246,6 +246,8 @@ class PaulBot {
 🔍 /search <query> - Recherche
 📧 /email - Actions email
 📅 /calendar - Agenda
+🎨 /theme - Changer de thème
+⚡ /shortcuts - Gérer raccourcis
 ❓ /help - Cette aide
 
 **Utilisation:**
@@ -256,6 +258,32 @@ Exemples:
 • "Mon agenda aujourd'hui"
 • "Recherche les tendances IA 2024"
       `, { parse_mode: 'Markdown' });
+    });
+
+    // /theme - UX Premium Advanced
+    this.bot.onText(/\/theme/, async (msg) => {
+      const chatId = msg.chat.id;
+      const userId = msg.from.id.toString();
+
+      try {
+        await this.ui.showThemeSelector(chatId, userId);
+      } catch (error) {
+        logger.error('Theme selector error:', error);
+        await this.ui.sendStyledMessage(chatId, 'Erreur lors de l\'affichage des thèmes', 'error');
+      }
+    });
+
+    // /shortcuts - UX Premium Advanced
+    this.bot.onText(/\/shortcuts/, async (msg) => {
+      const chatId = msg.chat.id;
+      const userId = msg.from.id.toString();
+
+      try {
+        await this.ui.showShortcutsMenu(chatId, userId);
+      } catch (error) {
+        logger.error('Shortcuts menu error:', error);
+        await this.ui.sendStyledMessage(chatId, 'Erreur lors de l\'affichage des raccourcis', 'error');
+      }
     });
   }
 
@@ -306,6 +334,17 @@ Exemples:
         }
       } else if (data === 'back_main') {
         await this.ui.showContextualMenu(chatId, 'main');
+      } else if (data.startsWith('theme_')) {
+        // UX Premium Advanced - Theme selection
+        const themeId = data.replace('theme_', '');
+        try {
+          await this.ui.setUserTheme(userId, themeId);
+          const theme = this.ui.getUserTheme(userId);
+          await this.bot.sendMessage(chatId, `✅ Thème "${theme.name}" activé !`, { parse_mode: 'Markdown' });
+        } catch (error) {
+          logger.error('Theme change error:', error);
+          await this.ui.sendStyledMessage(chatId, 'Erreur lors du changement de thème', 'error');
+        }
       }
     });
   }

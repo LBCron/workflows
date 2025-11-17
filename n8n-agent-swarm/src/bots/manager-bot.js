@@ -13,6 +13,7 @@
 const TelegramBot = require('node-telegram-bot-api');
 const PerformanceMonitoring = require('../core/performance-monitoring');
 const SecurityManager = require('../core/security-manager');
+const SecurityEnterprise = require('../core/security-enterprise');
 const LearningEngine = require('../core/learning-engine-v2');
 const CredentialVault = require('../core/credential-vault-ultimate');
 const logger = require('../utils/logger');
@@ -25,6 +26,7 @@ class ManagerBot {
     // Systèmes
     this.performance = new PerformanceMonitoring();
     this.security = new SecurityManager();
+    this.securityEnterprise = null; // Initialisé après security manager
     this.learningEngine = new LearningEngine();
     this.vault = new CredentialVault();
 
@@ -46,6 +48,9 @@ class ManagerBot {
     await this.security.initialize();
     await this.learningEngine.initialize();
     await this.vault.initialize();
+
+    // Initialiser Security Enterprise (nécessite security manager)
+    this.securityEnterprise = new SecurityEnterprise(this.security);
 
     this.setupEventListeners();
     this.setupCommands();
@@ -345,11 +350,171 @@ ${Object.entries(health.components).map(([name, status]) =>
 /unban <userId> - Débannir un utilisateur
 /reset_metrics - Reset métriques
 
+**Security Enterprise:**
+/audit - Générer rapport d'audit sécurité
+/sessions - Liste des sessions actives
+/trust <userId> - Afficher trust score
+/2fa_stats - Statistiques 2FA
+/gdpr_export <userId> - Export GDPR données user
+
 **Info:**
 /help - Cette aide
       `;
 
       await this.bot.sendMessage(msg.chat.id, message, { parse_mode: 'Markdown' });
+    });
+
+    // /audit - Security Enterprise
+    this.bot.onText(/\/audit/, async (msg) => {
+      if (!this.isAdmin(msg.from.id)) {
+        await this.bot.sendMessage(msg.chat.id, '❌ Accès refusé');
+        return;
+      }
+
+      try {
+        const endDate = new Date();
+        const startDate = new Date(endDate.getTime() - 24 * 60 * 60 * 1000); // Last 24h
+
+        const report = await this.securityEnterprise.generateSecurityAuditReport(startDate, endDate);
+
+        const message = `
+🔒 **Security Audit Report**
+
+**Period:** ${startDate.toLocaleString()} - ${endDate.toLocaleString()}
+
+**Summary:**
+• Total events: ${report.summary.totalEvents}
+• Critical events: ${report.summary.criticalEvents}
+• Security incidents: ${report.summary.securityIncidents}
+• Blocked attempts: ${report.summary.blockedAttempts}
+
+**GDPR Compliance:**
+• Status: ${report.compliance.gdpr.status}
+• Consent tracking: ${report.compliance.gdpr.consentTracking}
+• Data retention violations: ${report.compliance.gdpr.dataRetentionViolations}
+
+**Recommendations:** ${report.recommendations.length}
+${report.recommendations.slice(0, 3).map((r, i) =>
+  `${i + 1}. [${r.severity}] ${r.issue}`
+).join('\n')}
+        `;
+
+        await this.bot.sendMessage(msg.chat.id, message, { parse_mode: 'Markdown' });
+      } catch (error) {
+        logger.error('Audit report error:', error);
+        await this.bot.sendMessage(msg.chat.id, `❌ Error generating audit: ${error.message}`);
+      }
+    });
+
+    // /sessions - Security Enterprise
+    this.bot.onText(/\/sessions/, async (msg) => {
+      if (!this.isAdmin(msg.from.id)) {
+        await this.bot.sendMessage(msg.chat.id, '❌ Accès refusé');
+        return;
+      }
+
+      const sessions = Array.from(this.securityEnterprise.sessions.values());
+
+      const message = `
+🔐 **Active Sessions**
+
+**Total sessions:** ${sessions.length}
+
+${sessions.slice(0, 10).map((s, i) => `
+${i + 1}. User ${s.userId}
+   • Session ID: ${s.id.substring(0, 8)}...
+   • Created: ${new Date(s.createdAt).toLocaleString()}
+   • Last activity: ${new Date(s.lastActivity).toLocaleString()}
+   • 2FA verified: ${s.verified2FA ? '✅' : '❌'}
+   • Trust score: ${s.trustScore}
+`).join('\n')}
+
+${sessions.length > 10 ? `\n... and ${sessions.length - 10} more` : ''}
+      `;
+
+      await this.bot.sendMessage(msg.chat.id, message, { parse_mode: 'Markdown' });
+    });
+
+    // /trust - Security Enterprise
+    this.bot.onText(/\/trust (\S+)/, async (msg, match) => {
+      if (!this.isAdmin(msg.from.id)) {
+        await this.bot.sendMessage(msg.chat.id, '❌ Accès refusé');
+        return;
+      }
+
+      const userId = match[1];
+      const trustScore = this.securityEnterprise.getTrustScore(userId);
+
+      const message = `
+🎯 **Trust Score**
+
+**User:** ${userId}
+**Score:** ${trustScore}/100
+
+**Status:** ${trustScore >= 70 ? '✅ High Trust' : trustScore >= 40 ? '⚠️ Medium Trust' : '❌ Low Trust'}
+
+**Actions:**
+${trustScore < 50 ? '• 2FA required for sensitive operations' : ''}
+${trustScore < 30 ? '• Considered high risk user' : ''}
+      `;
+
+      await this.bot.sendMessage(msg.chat.id, message, { parse_mode: 'Markdown' });
+    });
+
+    // /2fa_stats - Security Enterprise
+    this.bot.onText(/\/2fa_stats/, async (msg) => {
+      if (!this.isAdmin(msg.from.id)) {
+        await this.bot.sendMessage(msg.chat.id, '❌ Accès refusé');
+        return;
+      }
+
+      const message = `
+🔐 **2FA Statistics**
+
+**Status:** ${this.securityEnterprise.mfa.enabled ? '✅ Enabled' : '❌ Disabled'}
+
+**Supported methods:**
+${this.securityEnterprise.mfa.methods.map(m => `• ${m}`).join('\n')}
+
+**Required for actions:**
+${this.securityEnterprise.mfa.requiredForActions.map(a => `• ${a}`).join('\n')}
+
+**Zero-Trust Mode:** ${this.securityEnterprise.zeroTrust.verifyEveryAction ? '🔒 Strict' : '⚡ Balanced'}
+      `;
+
+      await this.bot.sendMessage(msg.chat.id, message, { parse_mode: 'Markdown' });
+    });
+
+    // /gdpr_export - Security Enterprise
+    this.bot.onText(/\/gdpr_export (\S+)/, async (msg, match) => {
+      if (!this.isAdmin(msg.from.id)) {
+        await this.bot.sendMessage(msg.chat.id, '❌ Accès refusé');
+        return;
+      }
+
+      const userId = match[1];
+
+      try {
+        const data = await this.securityEnterprise.exportUserData(userId);
+
+        await this.bot.sendMessage(msg.chat.id, `
+✅ **GDPR Data Export**
+
+**User:** ${userId}
+**Export Date:** ${data.exportDate}
+**Data Retention Policy:** ${data.metadata.dataRetentionPolicy}
+
+_Data exported. In production, this would be sent as a file._
+        `, { parse_mode: 'Markdown' });
+
+        // In production, send as file:
+        // await this.bot.sendDocument(msg.chat.id, Buffer.from(JSON.stringify(data, null, 2)), {}, {
+        //   filename: `gdpr_export_${userId}_${Date.now()}.json`
+        // });
+      } catch (error) {
+        logger.error('GDPR export error:', error);
+        await this.bot.sendMessage(msg.chat.id, `❌ Error: ${error.message}`);
+      }
     });
   }
 
