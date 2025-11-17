@@ -706,7 +706,7 @@ ${!status.dependencies.allInstalled ? '\n⚠️ Installe dépendances Python (vo
       }
     });
 
-    // /xianyu_scan [vendorId] [maxPages] - Scan vendor
+    // /xianyu_scan [vendorId] [maxPages] - Scan vendor (bilingual)
     this.bot.onText(/\/xianyu_scan(?:\s+([^\s]+))?(?:\s+(\d+))?/, async (msg, match) => {
       if (!this.isAdmin(msg)) return;
 
@@ -715,7 +715,7 @@ ${!status.dependencies.allInstalled ? '\n⚠️ Installe dépendances Python (vo
 
       if (!vendorId) {
         return await this.safeSendMessage(msg.chat.id,
-          '❌ Utilisation: /xianyu_scan VENDOR_ID [MAX_PAGES]\n\nExemple: /xianyu_scan ABC123 50'
+          '❌ 用法 / Usage: /xianyu_scan VENDOR_ID [MAX_PAGES]\n\n例子 / Example: /xianyu_scan ABC123 50'
         );
       }
 
@@ -724,27 +724,27 @@ ${!status.dependencies.allInstalled ? '\n⚠️ Installe dépendances Python (vo
         const loggedIn = await this.xianyuScraper.isLoggedIn();
         if (!loggedIn) {
           return await this.safeSendMessage(msg.chat.id,
-            '❌ Non connecté à Xianyu\n\nUtilise d\'abord: /xianyu_login'
+            '❌ 未登录闲鱼 / Not logged in to Xianyu\n\n先使用 / First use: /xianyu_login'
           );
         }
 
         // Check if scan already running for this vendor
         if (this.activeXianyuScans.has(vendorId)) {
           return await this.safeSendMessage(msg.chat.id,
-            '⚠️ Scan déjà en cours pour ce vendeur\n\nUtilise /xianyu_cancel pour annuler'
+            '⚠️ 该卖家的扫描正在进行 / Scan already in progress for this vendor\n\n取消 / Cancel: /xianyu_cancel'
           );
         }
 
         this.activeXianyuScans.set(vendorId, { chatId: msg.chat.id, startTime: Date.now() });
 
         await this.safeSendMessage(msg.chat.id,
-`🚀 Démarrage scan Xianyu...
+`🚀 开始扫描闲鱼... / Starting Xianyu scan...
 
-📱 Vendeur: ${vendorId}
-📄 Pages max: ${maxPages}
-⏱️ Durée estimée: ${Math.ceil(maxPages * 0.2)}-${Math.ceil(maxPages * 0.3)} minutes
+📱 卖家 / Vendor: ${vendorId}
+📄 最大页数 / Max pages: ${maxPages}
+⏱️ 预计时间 / Estimated: ${Math.ceil(maxPages * 0.2)}-${Math.ceil(maxPages * 0.3)} 分钟 / minutes
 
-🔄 Je t'enverrai des updates toutes les 50 produits...`
+🔄 每50个产品更新一次 / Updates every 50 products...`
         );
 
         let lastProgress = null;
@@ -759,7 +759,7 @@ ${!status.dependencies.allInstalled ? '\n⚠️ Installe dépendances Python (vo
               lastProgress = progress;
 
               await this.safeSendMessage(msg.chat.id,
-                `📦 ${progress.count} produits scannés... (Page ${progress.page})`
+                `📦 已扫描 ${progress.count} 个产品... / ${progress.count} products scanned... (第 ${progress.page} 页 / Page ${progress.page})`
               );
             }
           }
@@ -769,13 +769,13 @@ ${!status.dependencies.allInstalled ? '\n⚠️ Installe dépendances Python (vo
         this.activeXianyuScans.delete(vendorId);
 
         await this.safeSendMessage(msg.chat.id,
-`✅ SCAN TERMINÉ !
+`✅ 扫描完成！/ SCAN COMPLETE!
 
-📊 Résultats:
-- Produits trouvés: ${scanResult.productsScanned}
-- Durée: ${(scanResult.duration / 1000 / 60).toFixed(1)} minutes
+📊 结果 / Results:
+- 找到产品 / Products found: ${scanResult.productsScanned}
+- 时长 / Duration: ${(scanResult.duration / 1000 / 60).toFixed(1)} 分钟 / minutes
 
-🔄 Analyse avec Vinted et calcul profit...`
+🔄 正在分析Vinted并计算利润... / Analyzing with Vinted and calculating profit...`
         );
 
         // Now analyze with Vinted and calculate profit
@@ -784,7 +784,7 @@ ${!status.dependencies.allInstalled ? '\n⚠️ Installe dépendances Python (vo
       } catch (error) {
         this.activeXianyuScans.delete(vendorId);
         logger.error('Error /xianyu_scan:', error);
-        await this.safeSendMessage(msg.chat.id, `❌ Erreur scan: ${error.message}`);
+        await this.safeSendMessage(msg.chat.id, `❌ 扫描错误 / Scan error: ${error.message}`);
       }
     });
 
@@ -811,14 +811,15 @@ ${!status.dependencies.allInstalled ? '\n⚠️ Installe dépendances Python (vo
 
   /**
    * Analyze Xianyu results with Vinted comparison and profit calculation
+   * With bilingual Chinese/English output
    */
   async analyzeXianyuResults(chatId, products) {
     if (!products || products.length === 0) {
-      return await this.safeSendMessage(chatId, '⚠️ Aucun produit à analyser');
+      return await this.safeSendMessage(chatId, '⚠️ 没有产品可分析 / No products to analyze');
     }
 
     await this.safeSendMessage(chatId,
-      `🔍 Analyse de ${products.length} produits avec Vinted...\n⏱️ Ceci peut prendre quelques minutes...`
+      `🔍 正在分析 ${products.length} 个产品...\nAnalyzing ${products.length} products with Vinted...\n\n⏱️ 这可能需要几分钟 / This may take a few minutes...`
     );
 
     const deals = [];
@@ -832,7 +833,7 @@ ${!status.dependencies.allInstalled ? '\n⚠️ Installe dépendances Python (vo
         // Progress update every 20 products
         if (analyzed % 20 === 0) {
           await this.safeSendMessage(chatId,
-            `📊 Analysé ${analyzed}/${products.length} produits...`
+            `📊 已分析 ${analyzed}/${products.length} / Analyzed ${analyzed}/${products.length}`
           );
         }
 
@@ -873,7 +874,7 @@ ${!status.dependencies.allInstalled ? '\n⚠️ Installe dépendances Python (vo
             image_url: product.images[0] || null,
             url: product.url,
             deal_score: profitCalc.profitable ? 85 : 50,
-            authenticity_score: product.aiScore || 50,
+            authenticity_score: 70, // Default score without GPT-4 Vision
             vinted_price_eur: vintedStats.avgPrice,
             profit_potential: profitCalc.profit,
             recommended: profitCalc.recommendation === 'BUY'
@@ -893,27 +894,27 @@ ${!status.dependencies.allInstalled ? '\n⚠️ Installe dépendances Python (vo
 
     if (topDeals.length === 0) {
       return await this.safeSendMessage(chatId,
-`📊 ANALYSE TERMINÉE
+`📊 分析完成 / ANALYSIS COMPLETE
 
-❌ Aucun deal rentable trouvé
+❌ 没有找到有利可图的交易 / No profitable deals found
 
-📦 Produits analysés: ${products.length}
-💰 Deals avec prix Vinted: ${deals.length}
-🎯 Deals rentables (>€20): 0
+📦 已分析产品 / Products analyzed: ${products.length}
+💰 有Vinted价格 / With Vinted prices: ${deals.length}
+🎯 有利可图(>€20) / Profitable (>€20): 0
 
-💡 Essaie un autre vendeur ou ajuste tes critères`
+💡 尝试其他卖家或调整标准 / Try another vendor or adjust criteria`
       );
     }
 
     // Send summary
     await this.safeSendMessage(chatId,
-`✅ ANALYSE TERMINÉE
+`✅ 分析完成 / ANALYSIS COMPLETE
 
-⏱️ Produits analysés: ${analyzed}
-🔍 Prix Vinted trouvés: ${deals.length}
-🔥 Deals rentables: ${topDeals.length}
+📦 已分析 / Analyzed: ${analyzed}
+🔍 找到价格 / Prices found: ${deals.length}
+🔥 有利可图 / Profitable: ${topDeals.length}
 
-📤 Envoi des top ${topDeals.length} deals...`
+📤 发送前 ${topDeals.length} 个交易... / Sending top ${topDeals.length} deals...`
     );
 
     // Send each deal
@@ -939,17 +940,18 @@ ${!status.dependencies.allInstalled ? '\n⚠️ Installe dépendances Python (vo
 
     // Final summary
     await this.safeSendMessage(chatId,
-`💾 Tous les deals sauvegardés !
+`💾 所有交易已保存！/ All deals saved!
 
-Commandes:
-- /deals - Voir tous les deals
-- /vendors - Gérer vendeurs
-- /xianyu_scan - Scanner un autre vendeur`
+📋 可用命令 / Commands:
+- /deals - 查看所有交易 / View all deals
+- /vendors - 管理卖家 / Manage vendors
+- /xianyu_scan - 扫描其他卖家 / Scan another vendor`
     );
   }
 
   /**
    * Format Xianyu deal for Telegram
+   * Simplified bilingual Chinese/English format
    */
   formatXianyuDeal(rank, deal) {
     const {
@@ -959,49 +961,50 @@ Commandes:
       condition,
       vintedStats,
       profitCalc,
-      aiAnalysis,
-      aiScore,
       url
     } = deal;
 
     const profitEmoji = profitCalc.profit >= 50 ? '🔥🔥🔥' :
                         profitCalc.profit >= 30 ? '🔥🔥' : '🔥';
 
+    const recommendation = profitCalc.recommendation === 'BUY' ? '💎 强烈推荐 / HIGHLY RECOMMENDED' :
+                           profitCalc.recommendation === 'CONSIDER' ? '👍 值得考虑 / CONSIDER' :
+                           '⚠️ 跳过 / SKIP';
+
     return `
-${profitEmoji} **DEAL #${rank}**
+${profitEmoji} **交易 #${rank} / DEAL #${rank}**
 
-📦 ${this.truncate(title, 60)}
+📦 ${this.truncate(title, 70)}
 
-💰 **Prix Chine**: ¥${priceCny.toFixed(2)} (€${priceEur.toFixed(2)})
-💵 **Vinted moyen**: €${vintedStats.avgPrice.toFixed(2)}
-📈 **PROFIT**: €${profitCalc.profit.toFixed(2)} (${profitCalc.margin.toFixed(1)}%)
+💰 **中国价格 / China**: ¥${priceCny.toFixed(2)} → €${priceEur.toFixed(2)}
+💵 **Vinted均价 / Avg**: €${vintedStats.avgPrice.toFixed(2)}
+📈 **利润 / PROFIT**: €${profitCalc.profit.toFixed(2)} (${profitCalc.margin.toFixed(1)}%)
 
-🤖 Score IA: ${aiScore}/100
-${condition ? '📊 État: ' + condition : ''}
-📊 ${vintedStats.count} annonces Vinted similaires
-
-${aiAnalysis ? '**Analyse IA:**\n' + this.truncate(aiAnalysis, 200) : ''}
+${recommendation}
+📊 ${vintedStats.count} 个Vinted类似商品 / similar listings
 
 🔗 ${url}
-
----
     `.trim();
   }
 
   /**
    * Calculate overall deal score
+   * Updated to work without AI analysis (no GPT-4 Vision)
    */
   calculateOverallScore(product, vintedStats, profitCalc) {
     let score = 0;
 
-    // Profit score (0-40 points)
-    if (profitCalc.profit >= 50) score += 40;
-    else if (profitCalc.profit >= 30) score += 30;
-    else if (profitCalc.profit >= 20) score += 20;
-    else score += 10;
+    // Profit score (0-50 points) - increased weight since no AI
+    if (profitCalc.profit >= 50) score += 50;
+    else if (profitCalc.profit >= 30) score += 40;
+    else if (profitCalc.profit >= 20) score += 30;
+    else score += 15;
 
-    // AI score (0-30 points)
-    score += Math.min(30, (product.aiScore || 50) / 100 * 30);
+    // Profit margin (0-20 points)
+    if (profitCalc.margin >= 50) score += 20;
+    else if (profitCalc.margin >= 30) score += 15;
+    else if (profitCalc.margin >= 20) score += 10;
+    else score += 5;
 
     // Vinted listings count (0-20 points)
     if (vintedStats.count >= 50) score += 20;

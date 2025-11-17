@@ -245,20 +245,208 @@ class VintedAPI {
   }
 
   /**
-   * Clean search query for better Vinted matches
+   * Chinese to English translation dictionary
+   * Maps common Chinese product terms to English for better Vinted matching
    */
-  cleanQuery(productTitle) {
-    // Remove common Chinese marketplace terms
-    let cleaned = productTitle
+  getTranslationDictionary() {
+    return {
+      // Clothing types
+      '连帽卫衣': 'Hoodie',
+      '卫衣': 'Sweatshirt',
+      'T恤': 'T-shirt',
+      '衬衫': 'Shirt',
+      '外套': 'Jacket',
+      '夹克': 'Jacket',
+      '大衣': 'Coat',
+      '羽绒服': 'Down Jacket',
+      '毛衣': 'Sweater',
+      '背心': 'Vest',
+      '裤子': 'Pants',
+      '牛仔裤': 'Jeans',
+      '短裤': 'Shorts',
+      '裙子': 'Skirt',
+      '连衣裙': 'Dress',
+
+      // Footwear
+      '运动鞋': 'Sneakers',
+      '球鞋': 'Sneakers',
+      '空军一号': 'Air Force 1',
+      '乔丹': 'Jordan',
+      '椰子': 'Yeezy',
+      '板鞋': 'Skateboard Shoes',
+      '靴子': 'Boots',
+      '凉鞋': 'Sandals',
+
+      // Accessories
+      '包': 'Bag',
+      '背包': 'Backpack',
+      '手提包': 'Handbag',
+      '钱包': 'Wallet',
+      '帽子': 'Hat',
+      '围巾': 'Scarf',
+      '手套': 'Gloves',
+      '腰带': 'Belt',
+      '太阳镜': 'Sunglasses',
+      '墨镜': 'Sunglasses',
+      '项链': 'Necklace',
+      '手表': 'Watch',
+
+      // Colors
+      '白色': 'White',
+      '黑色': 'Black',
+      '蓝色': 'Blue',
+      '红色': 'Red',
+      '绿色': 'Green',
+      '黄色': 'Yellow',
+      '灰色': 'Gray',
+      '粉色': 'Pink',
+      '紫色': 'Purple',
+      '橙色': 'Orange',
+      '棕色': 'Brown',
+      '米色': 'Beige',
+
+      // Conditions
+      '全新': 'New',
+      '二手': 'Used',
+      '九成新': 'Like New',
+      '95新': 'Excellent',
+      '8成新': 'Good',
+
+      // Brands/Popular terms
+      '正品': 'Authentic',
+      '原版': 'Original',
+      '限量': 'Limited',
+      '联名': 'Collaboration',
+      '复古': 'Vintage',
+      '经典': 'Classic',
+
+      // Sizes
+      '大号': 'Large',
+      '中号': 'Medium',
+      '小号': 'Small',
+      '加大': 'Extra Large',
+
+      // Other
+      '男': 'Men',
+      '女': 'Women',
+      '男女通用': 'Unisex',
+      '儿童': 'Kids'
+    };
+  }
+
+  /**
+   * Extract brand from product title
+   * @param {string} title - Product title
+   * @returns {string|null} - Detected brand or null
+   */
+  extractBrand(title) {
+    const commonBrands = [
+      'Supreme', 'Nike', 'Adidas', 'Jordan', 'Yeezy',
+      'Gucci', 'Louis Vuitton', 'LV', 'Prada', 'Chanel',
+      'Dior', 'Balenciaga', 'Off-White', 'Bape', 'Palace',
+      'Stone Island', 'Moncler', 'Canada Goose', 'North Face',
+      'Champion', 'Fila', 'Puma', 'Reebok', 'New Balance',
+      'Converse', 'Vans', 'Lacoste', 'Ralph Lauren', 'Tommy Hilfiger',
+      'Burberry', 'Versace', 'Armani', 'Givenchy', 'Fendi'
+    ];
+
+    const upperTitle = title.toUpperCase();
+
+    for (const brand of commonBrands) {
+      if (upperTitle.includes(brand.toUpperCase())) {
+        return brand;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Extract product type from title
+   * @param {string} title - Product title
+   * @returns {string|null} - Product type or null
+   */
+  extractProductType(title) {
+    const productTypes = [
+      'Hoodie', 'Sweatshirt', 'T-shirt', 'Shirt', 'Jacket', 'Coat',
+      'Sweater', 'Pants', 'Jeans', 'Shorts', 'Skirt', 'Dress',
+      'Sneakers', 'Shoes', 'Boots', 'Bag', 'Backpack', 'Hat',
+      'Watch', 'Sunglasses', 'Belt', 'Scarf'
+    ];
+
+    const lowerTitle = title.toLowerCase();
+
+    for (const type of productTypes) {
+      if (lowerTitle.includes(type.toLowerCase())) {
+        return type;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Clean Chinese product title for Vinted search
+   * Translates Chinese terms to English for better matching
+   * @param {string} title - Original Chinese/mixed title
+   * @returns {string} - Cleaned English title
+   */
+  cleanChineseTitle(title) {
+    const translations = this.getTranslationDictionary();
+    let cleaned = title;
+
+    // Step 1: Replace known Chinese terms with English
+    Object.entries(translations).forEach(([chinese, english]) => {
+      const regex = new RegExp(chinese, 'g');
+      cleaned = cleaned.replace(regex, english);
+    });
+
+    // Step 2: Remove Chinese characters and special symbols
+    cleaned = cleaned
       .replace(/[【】\[\]]/g, ' ')
-      .replace(/全新|二手|9成新|95新/g, '')
-      .replace(/包邮|顺丰/g, '')
+      .replace(/[^\x00-\x7F]+/g, ' ') // Remove non-ASCII (remaining Chinese)
+      .replace(/\s+/g, ' ')
       .trim();
 
-    // Extract brand if present
-    const brandMatch = cleaned.match(/^([A-Z][a-z]+)/);
-    if (brandMatch) {
-      return brandMatch[0] + ' ' + cleaned.substring(brandMatch[0].length).trim();
+    // Step 3: Extract brand and put it first for better matching
+    const brand = this.extractBrand(cleaned);
+    if (brand) {
+      // Remove brand from current position
+      cleaned = cleaned.replace(new RegExp(brand, 'gi'), '').trim();
+      // Add brand at the beginning
+      cleaned = `${brand} ${cleaned}`;
+    }
+
+    // Step 4: Clean up extra spaces
+    cleaned = cleaned.replace(/\s+/g, ' ').trim();
+
+    return cleaned;
+  }
+
+  /**
+   * Clean search query for better Vinted matches
+   * Enhanced version with Chinese support
+   */
+  cleanQuery(productTitle) {
+    // First, try to translate Chinese terms
+    let cleaned = this.cleanChineseTitle(productTitle);
+
+    // Remove marketplace-specific terms
+    cleaned = cleaned
+      .replace(/包邮|顺丰|快递/g, '')
+      .replace(/全新|二手|9成新|95新|8成新/g, '')
+      .replace(/正品|原版/g, 'Authentic')
+      .trim();
+
+    // Extract brand if present and prioritize it
+    const brand = this.extractBrand(cleaned);
+    const productType = this.extractProductType(cleaned);
+
+    // Build optimized query: Brand + Type + other keywords
+    if (brand && productType) {
+      return `${brand} ${productType}`;
+    } else if (brand) {
+      return cleaned; // Already has brand at front
     }
 
     return cleaned;

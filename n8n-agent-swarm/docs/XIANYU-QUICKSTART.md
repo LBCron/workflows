@@ -1,6 +1,21 @@
 # 🚀 Xianyu Integration - Quick Start
+# 闲鱼集成 - 快速入门
 
 Get started with Xianyu auto-scraping in 5 minutes!
+5分钟内开始使用闲鱼自动扫描！
+
+---
+
+## 💰 Zero-Cost Operation / 零成本运营
+
+**NEW:** Remove GPT-4 Vision for $0 cost! See [XIANYU-ZERO-COST-GUIDE.md](./XIANYU-ZERO-COST-GUIDE.md)
+
+**新功能：** 移除 GPT-4 Vision 实现零成本！查看 [零成本指南](./XIANYU-ZERO-COST-GUIDE.md)
+
+| Mode | Cost per 1000 Products | Monthly (10 scans/day) |
+|------|------------------------|------------------------|
+| With GPT-4 Vision | ~$10 | ~$3,000 |
+| **Without GPT-4 Vision** | **$0** | **$0** |
 
 ---
 
@@ -70,63 +85,81 @@ PYTHON_PATH="/home/user/workflows/ai-goofish-monitor/venv/bin/python"
 
 ---
 
-## 🎯 First Scan (3 Steps)
+## 🎯 First Scan (3 Steps) / 首次扫描（3步）
 
-### Step 1: Start Bot
+### Step 1: Start Bot / 启动机器人
 
 ```bash
 cd /home/user/workflows/n8n-agent-swarm
 npm run manager
 ```
 
-### Step 2: Login (One-Time)
+### Step 2: Login (One-Time) / 登录（一次性）
 
-In Telegram:
+In Telegram / 在Telegram中:
 ```
 /xianyu_login
 ```
 
-- Bot sends QR code
-- Scan with Xianyu mobile app
-- Wait for confirmation (~30 seconds)
+**What happens / 发生什么:**
+- Bot sends QR code / 机器人发送二维码
+- Scan with Xianyu mobile app / 用闲鱼手机应用扫描
+- Wait for confirmation (~30 seconds) / 等待确认（约30秒）
 
-### Step 3: Scan Vendor
+### Step 3: Scan Vendor / 扫描卖家
 
 ```
 /xianyu_scan ABC123
 ```
 
 Replace `ABC123` with real Xianyu vendor ID.
+将 `ABC123` 替换为真实的闲鱼卖家ID。
 
-**Example vendors to try:**
-- Supreme resellers
-- Nike/Adidas sellers
-- Electronics vendors
+**Example vendors to try / 可尝试的卖家示例:**
+- Supreme resellers / Supreme转售商
+- Nike/Adidas sellers / Nike/Adidas卖家
+- Electronics vendors / 电子产品卖家
 
 ---
 
-## 📊 Expected Results
+## 📊 Expected Results / 预期结果
 
-After 10-15 minutes, you'll receive:
+After 10-15 minutes, you'll receive / 10-15分钟后，您将收到:
 
 ```
-✅ ANALYSE TERMINÉE
+✅ 分析完成 / ANALYSIS COMPLETE
 
-⏱️ Produits analysés: 847
-🔍 Prix Vinted trouvés: 156
-🔥 Deals rentables: 18
+📦 已分析 / Analyzed: 847
+🔍 找到价格 / Prices found: 156
+🔥 有利可图 / Profitable: 18
 
-📤 Envoi des top 18 deals...
+📤 发送前 18 个交易... / Sending top 18 deals...
 ```
 
-Each deal includes:
-- 📦 Product title
-- 💰 Price (China vs France)
-- 📈 Profit calculation
-- 🤖 AI authenticity score
-- 📊 Vinted market data
-- 🖼️ Product photo
-- 🔗 Direct link
+**Each deal includes / 每个交易包括:**
+- 📦 Product title / 产品标题
+- 💰 Price (China vs France) / 价格（中国 vs 法国）
+- 📈 Profit calculation / 利润计算
+- 💎 Recommendation / 推荐
+- 📊 Vinted market data / Vinted市场数据
+- 🖼️ Product photo / 产品照片
+- 🔗 Direct link / 直接链接
+
+**Sample deal output / 交易输出示例:**
+```
+🔥🔥 交易 #1 / DEAL #1
+
+📦 Supreme Box Logo Hoodie
+
+💰 中国价格 / China: ¥450 → €51.20
+💵 Vinted均价 / Avg: €180.00
+📈 利润 / PROFIT: €95.80 (53.2%)
+
+💎 强烈推荐 / HIGHLY RECOMMENDED
+📊 47 个Vinted类似商品 / similar listings
+
+🔗 https://2.taobao.com/item.htm?id=...
+```
 
 ---
 
@@ -246,17 +279,39 @@ All checked? You're ready to scan! 🚀
 
 ---
 
-## 🎉 Success Example
+## 🎉 Success Example / 成功示例
 
 ```
-Input: /xianyu_scan VENDOR_123 30
+Input / 输入: /xianyu_scan VENDOR_123 30
 
-Output:
-- ✅ 543 products scanned
-- 🔍 127 with Vinted prices
-- 🔥 15 profitable deals
-- 💰 Best profit: €67.50
-- ⏱️ Time: 8.2 minutes
+Output / 输出:
+- ✅ 543 products scanned / 已扫描产品
+- 🔍 127 with Vinted prices / 有Vinted价格
+- 🔥 15 profitable deals / 有利可图的交易
+- 💰 Best profit / 最佳利润: €67.50
+- ⏱️ Time / 时间: 8.2 minutes / 分钟
 ```
 
-**Happy deal hunting! 🔥**
+---
+
+## 🌟 Key Features / 主要功能
+
+✅ **Bilingual Output** / 双语输出
+- All messages in Chinese and English
+- 所有消息都是中英文
+
+✅ **Zero Cost** / 零成本
+- No GPT-4 Vision = $0 per scan
+- 无GPT-4 Vision = 每次扫描 $0
+
+✅ **Smart Matching** / 智能匹配
+- 70+ Chinese term translations
+- 70多个中文词汇翻译
+
+✅ **Profit Focus** / 专注利润
+- Clear profit calculations
+- 清晰的利润计算
+
+---
+
+**Happy deal hunting! / 祝您淘到好货！🔥**
