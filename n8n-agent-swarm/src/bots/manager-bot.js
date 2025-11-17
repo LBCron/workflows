@@ -16,6 +16,9 @@ const SecurityManager = require('../core/security-manager');
 const SecurityEnterprise = require('../core/security-enterprise');
 const LearningEngine = require('../core/learning-engine-v2');
 const CredentialVault = require('../core/credential-vault-ultimate');
+const AutomationEngine = require('../core/automation-engine');
+const AnalyticsDashboard = require('../core/analytics-dashboard');
+const MultiUserSystem = require('../core/multi-user-system');
 const logger = require('../utils/logger');
 
 class ManagerBot {
@@ -29,6 +32,11 @@ class ManagerBot {
     this.securityEnterprise = null; // Initialisé après security manager
     this.learningEngine = new LearningEngine();
     this.vault = new CredentialVault();
+
+    // Premium Systems
+    this.automation = new AutomationEngine();
+    this.analytics = new AnalyticsDashboard();
+    this.multiUser = new MultiUserSystem();
 
     // Auto-report config
     this.autoReport = {
@@ -357,6 +365,11 @@ ${Object.entries(health.components).map(([name, status]) =>
 /2fa_stats - Statistiques 2FA
 /gdpr_export <userId> - Export GDPR données user
 
+**Premium Systems:**
+/workflows - Automation Engine status
+/analytics - Analytics Dashboard
+/teams - Multi-User System
+
 **Info:**
 /help - Cette aide
       `;
@@ -515,6 +528,95 @@ _Data exported. In production, this would be sent as a file._
         logger.error('GDPR export error:', error);
         await this.bot.sendMessage(msg.chat.id, `❌ Error: ${error.message}`);
       }
+    });
+
+    // /workflows - Automation Engine
+    this.bot.onText(/\/workflows/, async (msg) => {
+      if (!this.isAdmin(msg.from.id)) {
+        await this.bot.sendMessage(msg.chat.id, '❌ Accès refusé');
+        return;
+      }
+
+      const stats = this.automation.getStats();
+      const workflows = this.automation.listWorkflows();
+
+      const message = `
+🤖 **Automation Workflows**
+
+**Statistics:**
+• Total workflows: ${workflows.length}
+• Active workflows: ${stats.activeWorkflows}
+• Total executions: ${stats.totalExecutions}
+• Success rate: ${stats.totalExecutions > 0 ? ((stats.successfulExecutions / stats.totalExecutions) * 100).toFixed(1) : 0}%
+• Avg execution time: ${stats.averageExecutionTime.toFixed(0)}ms
+
+**Active Workflows:**
+${workflows.filter(w => w.enabled).slice(0, 5).map(w =>
+  `• ${w.name} (${w.executionCount} runs)`
+).join('\n') || 'No active workflows'}
+      `;
+
+      await this.bot.sendMessage(msg.chat.id, message, { parse_mode: 'Markdown' });
+    });
+
+    // /analytics - Analytics Dashboard
+    this.bot.onText(/\/analytics/, async (msg) => {
+      if (!this.isAdmin(msg.from.id)) {
+        await this.bot.sendMessage(msg.chat.id, '❌ Accès refusé');
+        return;
+      }
+
+      const metrics = this.analytics.getStats();
+
+      const message = `
+📊 **Analytics Dashboard**
+
+**Users:**
+• Total: ${metrics.users.total}
+• Active: ${metrics.users.active}
+• New: ${metrics.users.new}
+• Retention: ${(metrics.users.retention * 100).toFixed(1)}%
+
+**System Performance:**
+• Requests/sec: ${metrics.system.requestsPerSecond.toFixed(2)}
+• Avg response: ${metrics.system.averageResponseTime.toFixed(0)}ms
+• Error rate: ${(metrics.system.errorRate * 100).toFixed(2)}%
+
+**Business Metrics:**
+• Total interactions: ${metrics.business.totalInteractions}
+• Success rate: ${(metrics.business.successRate * 100).toFixed(1)}%
+• User satisfaction: ${(metrics.business.userSatisfaction * 100).toFixed(1)}%
+      `;
+
+      await this.bot.sendMessage(msg.chat.id, message, { parse_mode: 'Markdown' });
+    });
+
+    // /teams - Multi-User System
+    this.bot.onText(/\/teams/, async (msg) => {
+      if (!this.isAdmin(msg.from.id)) {
+        await this.bot.sendMessage(msg.chat.id, '❌ Accès refusé');
+        return;
+      }
+
+      const stats = this.multiUser.getStats();
+
+      const message = `
+👥 **Multi-User System**
+
+**Overview:**
+• Total users: ${stats.totalUsers}
+• Total teams: ${stats.totalTeams}
+• Pending invitations: ${stats.pendingInvitations}
+
+**Shared Resources:**
+• Shared credentials: ${stats.sharedCredentials}
+• Shared workflows: ${stats.sharedWorkflows}
+
+**Activity:**
+• Recent activities: ${stats.recentActivities}
+      `;
+
+      await this.bot.sendMessage(msg.chat.id, message, { parse_mode: 'Markdown' });
     });
   }
 
