@@ -198,6 +198,7 @@ class PerformanceMonitoring extends EventEmitter {
 
   updateCacheHitRate() {
     const total = this.metrics.cache.hits + this.metrics.cache.misses;
+    // Éviter division par zéro
     this.metrics.cache.hitRate = total > 0 ? this.metrics.cache.hits / total : 0;
   }
 
