@@ -36,14 +36,9 @@ const crypto = require('crypto');
 const WeChatScraper = require('../../scrapers/wechat/wechat-scraper');
 const WeigouScraper = require('../../scrapers/weigou/weigou-scraper');
 
-// Integrations (auto-scrapers)
+// Integrations (auto-scrapers) - COMMERCE ONLY
 const XianyuAutoScraper = require('../../integrations/xianyu-scraper');
 const VintedAPI = require('../../integrations/vinted-api');
-
-// NEW: Phase 2 - Advanced Agents
-const SetupWizard = require('./setup-wizard');
-const DriveAgent = require('../../agents/drive-agent');
-const WebSearchAgent = require('../../agents/web-search-agent');
 
 // Constants (BUG #23 fix: Magic numbers)
 const MAX_MESSAGE_LENGTH = 4096;
@@ -94,15 +89,9 @@ class ManagerBot {
       weigou: new WeigouScraper()
     };
 
-    // Auto-scrapers (production-ready)
+    // Auto-scrapers (production-ready) - COMMERCE ONLY
     this.xianyuScraper = new XianyuAutoScraper();
     this.vintedAPI = new VintedAPI();
-
-    // NEW: Phase 2 - Advanced Agents
-    this.driveAgent = new DriveAgent();
-    this.webSearchAgent = new WebSearchAgent(this.openai);
-    // Setup Wizard will be initialized after bot is ready
-    this.setupWizard = null;
 
     // Xianyu active scans tracking
     this.activeXianyuScans = new Map();
@@ -370,23 +359,12 @@ class ManagerBot {
       // Init scrapers
       await this.initScrapers();
 
-      // NEW: Initialize Setup Wizard (needs bot instance)
-      this.setupWizard = new SetupWizard(
-        this.bot,
-        this.memory,
-        this.xianyuScraper,
-        null, // emailAgent - TODO
-        null, // calendarAgent - TODO
-        this.driveAgent
-      );
-
       // Setup
       this.setupCommands();
       this.setupMessageHandler();
       this.setupVoiceHandler();
       this.setupDocumentHandler();
       this.setupDailyBackup();
-      this.setupCallbackQueryHandler(); // NEW: For Setup Wizard buttons
 
       logger.info('✅ Manager Bot v2.0 actif !');
       logger.info(`📁 Mémoire: ${this.memory.paths.local}`);
@@ -395,23 +373,24 @@ class ManagerBot {
 
       // Welcome message (BUG #1 fix: No markdown)
       await this.safeSendMessage(this.adminUserId,
-`🤖 Manager Bot v2.0 - Actif !
+`💼 Manager Bot v2.0 - Commerce Chine-France
 
 ✨ Version optimisée:
 - 33 bugs corrigés
 - 100% production-ready
-- Setup Wizard interactif
-- Google Drive + Web Search
-- Gestion erreurs robuste
+- Xianyu auto-scraper
+- Vinted comparison
+- Profit calculation
+- Bilingual 中文/English
 
 Commandes:
-/start - Guide complet
-/setup - Configuration interactive
-/drive - Google Drive
-/search - Recherche web
-/xianyu_scan - Scanner Xianyu
+/start - Menu principal
+/xianyu_login - Login Xianyu
+/xianyu_scan - Scanner vendeur
+/deals - Voir deals
+/vendors - Gérer vendeurs
 
-🧠 Mémoire persistante active !`);
+🛍️ Ready for business!`);
 
     } catch (error) {
       logger.error('❌ Erreur démarrage:', error);
@@ -442,28 +421,25 @@ Commandes:
       if (!this.isAdmin(msg)) return;
 
       await this.safeSendMessage(msg.chat.id,
-`🤖 Manager Bot v2.0
+`💼 Manager Bot v2.0 - Commerce Chine-France
 
-Assistant commerce Chine-France + Google Services.
+商务助手 / Business Assistant
 
-🎯 Setup Initial:
-/setup - Configuration interactive (Xianyu + Google)
+闲鱼 / Xianyu:
+/xianyu_login - 登录 / Login (QR code)
+/xianyu_scan [ID] [pages] - 扫描卖家 / Scan vendor
+/xianyu_status - 状态 / Status
 
-🛒 Commerce:
-/vendors - Gérer vendeurs suivis
-/deals - Meilleurs deals trouvés
-/xianyu_scan - Scanner vendeur Xianyu
+📊 Deals & Stats:
+/deals - 查看交易 / View profitable deals
+/vendors - 管理卖家 / Manage vendors
+/stats - 统计 / Statistics
 
-📁 Google Services:
-/drive - Google Drive (cherche, lis, crée)
-/search - Recherche web + résumé IA
+🧠 Memory:
+/memory_stats - Statistiques mémoire
+/memory_export - Export données
 
-🧠 Mémoire:
-/memory_stats - Statistiques
-/memory_export - Export iPhone
-
-💬 Natural Language supporté !
-🎤 Messages vocaux supportés !`);
+开始吧！/ Let's do business! 🚀`);
     });
 
     // /vendors (BUG #2 fix: Check method exists)
@@ -561,7 +537,6 @@ Assistant commerce Chine-France + Google Services.
     this.setupMemoryCommands();
     this.setupAdminCommands();
     this.setupXianyuCommands();
-    this.setupNewAgentCommands(); // NEW: Setup Wizard + Drive + Search
   }
 
   setupMemoryCommands() {
@@ -659,193 +634,6 @@ Assistant commerce Chine-France + Google Services.
 🔄 Caches:
 - Intents: ${this.intentCache.size}/${this.INTENT_CACHE_MAX}`);
     });
-  }
-
-  // ═══════════════════════════════════════════════════════════
-  // NEW AGENT COMMANDS (Phase 2)
-  // ═══════════════════════════════════════════════════════════
-
-  setupNewAgentCommands() {
-    // /setup - Interactive setup wizard
-    this.bot.onText(/\/setup/, async (msg) => {
-      if (!this.isAdmin(msg)) return;
-
-      try {
-        await this.setupWizard.start(msg.chat.id, msg.from.id);
-      } catch (error) {
-        logger.error('Error /setup:', error);
-        await this.safeSendMessage(msg.chat.id, `❌ Erreur: ${error.message}`);
-      }
-    });
-
-    // /drive [query] - Google Drive operations
-    this.bot.onText(/\/drive(?:\s+(.+))?/, async (msg, match) => {
-      if (!this.isAdmin(msg)) return;
-
-      const query = match[1];
-
-      if (!query) {
-        return await this.safeSendMessage(msg.chat.id,
-`📁 Google Drive Agent
-
-Commandes:
-/drive cherche [mot-clé] - Chercher fichiers
-/drive lis [nom-fichier] - Lire un fichier
-/drive crée [titre] - Créer un document
-/drive liste - Fichiers récents
-
-Exemples:
-/drive cherche contrat
-/drive lis rapport.txt
-/drive crée "Mon rapport"`
-        );
-      }
-
-      try {
-        await this.handleDriveCommand(msg.chat.id, query);
-      } catch (error) {
-        logger.error('Error /drive:', error);
-        await this.safeSendMessage(msg.chat.id, `❌ Erreur Drive: ${error.message}`);
-      }
-    });
-
-    // /search [query] - Web search
-    this.bot.onText(/\/search(?:\s+(.+))?/, async (msg, match) => {
-      if (!this.isAdmin(msg)) return;
-
-      const query = match[1];
-
-      if (!query) {
-        return await this.safeSendMessage(msg.chat.id,
-`🔍 Web Search Agent
-
-Usage: /search [requête]
-
-Exemples:
-/search tendances IA 2024
-/search actualités Bitcoin
-/search Nike Air Max prix
-
-🎁 Gratuit (DuckDuckGo) + résumé IA!`
-        );
-      }
-
-      try {
-        await this.handleSearchCommand(msg.chat.id, query);
-      } catch (error) {
-        logger.error('Error /search:', error);
-        await this.safeSendMessage(msg.chat.id, `❌ Erreur recherche: ${error.message}`);
-      }
-    });
-  }
-
-  /**
-   * Handle Drive command - parse intent and execute
-   */
-  async handleDriveCommand(chatId, query) {
-    const lowerQuery = query.toLowerCase();
-
-    // Search files
-    if (lowerQuery.startsWith('cherche ') || lowerQuery.startsWith('search ')) {
-      const searchTerm = query.substring(query.indexOf(' ') + 1);
-      await this.safeSendMessage(chatId, `🔍 Recherche "${searchTerm}" dans Drive...`);
-
-      const files = await this.driveAgent.searchFiles(searchTerm, 10);
-
-      if (!files || files.length === 0) {
-        return await this.safeSendMessage(chatId, '❌ Aucun fichier trouvé');
-      }
-
-      let message = `📁 Trouvé ${files.length} fichier(s):\n\n`;
-      files.slice(0, 5).forEach((file, i) => {
-        message += `${i + 1}. ${file.name}\n`;
-        message += `   Type: ${file.mimeType}\n`;
-        message += `   🔗 ${file.webViewLink}\n\n`;
-      });
-
-      await this.safeSendMessage(chatId, message);
-    }
-    // List recent files
-    else if (lowerQuery === 'liste' || lowerQuery === 'list') {
-      await this.safeSendMessage(chatId, '📄 Fichiers récents...');
-
-      const files = await this.driveAgent.listRecentFiles(10);
-
-      if (!files || files.length === 0) {
-        return await this.safeSendMessage(chatId, '❌ Aucun fichier');
-      }
-
-      let message = `📁 ${files.length} fichiers récents:\n\n`;
-      files.forEach((file, i) => {
-        message += `${i + 1}. ${file.name}\n`;
-        message += `   Modifié: ${new Date(file.modifiedTime).toLocaleDateString()}\n\n`;
-      });
-
-      await this.safeSendMessage(chatId, message);
-    }
-    // Create document
-    else if (lowerQuery.startsWith('crée ') || lowerQuery.startsWith('create ')) {
-      const title = query.substring(query.indexOf(' ') + 1).replace(/['"]/g, '');
-      await this.safeSendMessage(chatId, `📝 Création "${title}"...`);
-
-      const doc = await this.driveAgent.createDocument(title, '');
-
-      await this.safeSendMessage(chatId,
-        `✅ Document créé!\n\n📄 ${doc.title}\n🔗 ${doc.url}`
-      );
-    }
-    // Read file
-    else if (lowerQuery.startsWith('lis ') || lowerQuery.startsWith('read ')) {
-      const fileName = query.substring(query.indexOf(' ') + 1);
-      await this.safeSendMessage(chatId, `📖 Lecture "${fileName}"...`);
-
-      // First search for file
-      const files = await this.driveAgent.searchFiles(fileName, 1);
-
-      if (!files || files.length === 0) {
-        return await this.safeSendMessage(chatId, `❌ Fichier "${fileName}" non trouvé`);
-      }
-
-      const file = files[0];
-      const content = await this.driveAgent.readFile(file.id);
-
-      const preview = content.substring(0, 2000);
-      await this.safeSendMessage(chatId,
-        `📄 ${file.name}\n\n${preview}${content.length > 2000 ? '\n\n...(tronqué)' : ''}`
-      );
-    }
-    else {
-      await this.safeSendMessage(chatId,
-        '❓ Commande non reconnue.\n\nUtilise: /drive pour voir l\'aide'
-      );
-    }
-  }
-
-  /**
-   * Handle Search command
-   */
-  async handleSearchCommand(chatId, query) {
-    await this.safeSendMessage(chatId, `🔍 Recherche: "${query}"...`);
-
-    const results = await this.webSearchAgent.search(query, 5);
-
-    if (!results.results || results.results.length === 0) {
-      return await this.safeSendMessage(chatId, '❌ Aucun résultat trouvé');
-    }
-
-    // Send summary
-    let message = `🔍 **Résultats pour: "${query}"**\n\n`;
-    message += `📝 **Résumé:**\n${results.summary}\n\n`;
-    message += `🔗 **Sources:**\n`;
-
-    results.results.slice(0, 3).forEach((r, i) => {
-      message += `${i + 1}. ${r.title}\n`;
-      message += `   ${r.url}\n\n`;
-    });
-
-    message += `\n🎯 Source: ${results.source}`;
-
-    await this.safeSendMessage(chatId, message);
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -1248,35 +1036,6 @@ ${recommendation}
   }
 
   // ═══════════════════════════════════════════════════════════
-  // CALLBACK QUERY HANDLER (For Setup Wizard buttons)
-  // ═══════════════════════════════════════════════════════════
-
-  setupCallbackQueryHandler() {
-    this.bot.on('callback_query', async (query) => {
-      try {
-        // Route setup_ callbacks to Setup Wizard
-        if (query.data.startsWith('setup_')) {
-          await this.setupWizard.handleCallback(query);
-          return;
-        }
-
-        // Answer all other callbacks
-        await this.bot.answerCallbackQuery(query.id, {
-          text: '✅ Action enregistrée'
-        });
-
-      } catch (error) {
-        logger.error('Callback query error:', error);
-        await this.bot.answerCallbackQuery(query.id, {
-          text: `❌ Erreur: ${error.message}`
-        }).catch(() => {});
-      }
-    });
-
-    logger.info('✅ Callback query handler configured');
-  }
-
-  // ═══════════════════════════════════════════════════════════
   // MESSAGE HANDLER (BUG #5, #6 fix)
   // ═══════════════════════════════════════════════════════════
 
@@ -1286,12 +1045,6 @@ ${recommendation}
       if (msg.text?.startsWith('/') || msg.voice || msg.document) return;
       if (!this.isAdmin(msg)) return;
       if (!msg.text) return;
-
-      // NEW: Let Setup Wizard handle OAuth codes first
-      if (this.setupWizard) {
-        const handled = await this.setupWizard.handleMessage(msg);
-        if (handled) return; // Message was an OAuth code, don't process further
-      }
 
       // BUG #5 fix: Prevent duplicate processing
       const msgId = `${msg.chat.id}_${msg.message_id}`;
